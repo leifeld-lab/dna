@@ -123,6 +123,19 @@ dna_jar <- function() {
     }
   }, error = function(e) {success <- FALSE})
 
+  # try to locate jar file inside package using system file
+  tryCatch({
+    jar <- system.file(
+      "java",
+      paste0("dna-", v, ".jar"),
+      package = "rDNA"
+    )
+    if (nzchar(jar)) {
+      message("Jar file found in package.")
+      return(jar)
+    }
+  }, error = function(e) {success <- FALSE})
+
   # try to locate jar file in working directory and return jar file path
   tryCatch({
     jar <- paste0(getwd(), "/dna-", v, ".jar")
@@ -132,8 +145,8 @@ dna_jar <- function() {
     }
   }, error = function(e) {success <- FALSE})
 
-  stop("DNA jar file could not be found in the library path or working ",
-       "directory. Your current rDNA version is ", v, ".")
+  stop("DNA jar file could not be found in the library path, package, or ",
+       "working directory. Your current rDNA version is ", v, ".")
 }
 
 #' Provides a small sample database
@@ -874,4 +887,131 @@ dna_getStatements <- function(statementType = 1, statementIds = integer()) {
   colnames(dat) <- var_names
   class(dat) <- c("dna_statements", class(dat))
   return(dat)
+}
+
+#' Add a statement to the DNA database
+#'
+#' Add a new statement to the DNA database.
+#'
+#' The \code{dna_addStatement} function can add a new statement to an existing
+#' DNA database. The user supplies a document ID, the location of the statement
+#' in the document, and the variables and their values. As different statement
+#' types have different variables, the \code{...} argument catches all
+#' variables and their values supplied by the user. The statement ID will be
+#' automatically generated and returned.
+#'
+#' @param documentID An integer specifying the ID of the document for which the
+#' statement should be added.
+#' @param startCaret An integer for the start location of the statement in the
+#' document text. Must be non-negative and not larger than the number of
+#' characters minus one in the document.
+#' @param endCaret An integer for the stop location of the statement in the
+#' document text. Must be non-negative, greater than \code{startCaret}, and not
+#' larger than the number of characters in the document.
+#' @param statementType The statement type of the statement that will be added.
+#' Can be provided as an integer ID of the statement type or as a character
+#' object representing the name of the statement type (if there is no
+#' ambiguity).
+#' @param coder An integer value indicating which coder created the document.
+#' @param ... Values of the variables contained in the statement, for example
+#' \code{organization = "some actor", concept = "my concept", agreement = 1}.
+#' Values for Boolean variables can be provided as \code{logical} values
+#' (\code{TRUE} or \code{FALSE}) or \code{numeric} values (\code{1} or
+#' \code{0}).
+#' @return The ID of the newly created statement in the DNA database. If the
+#' statement could not be added, the function returns \code{-1}.
+#'
+#' @author Philip Leifeld
+#'
+#' @importFrom rJava .jarray
+#' @importFrom rJava .jcall
+#' @export
+dna_addStatement <- function(documentID,
+                             startCaret = 0,
+                             endCaret = 1,
+                             statementType = "DNA Statement",
+                             coder = 1,
+                             ...) {
+  if (!is.integer(documentID)) {
+    if (is.numeric(documentID)) {
+      documentID <- as.integer(documentID)
+    } else {
+      stop("'documentID' must be a numeric value specifying the ID of the document to which the statement should be added. You can look up document IDs using the 'dna_getDocuments' function.")
+    }
+  }
+  if (!is.integer(startCaret)) {
+    if (is.numeric(startCaret)) {
+      startCaret <- as.integer(startCaret)
+    } else {
+      stop("'startCaret' must be a single numeric value specifying the start location in of the statement in the document.")
+    }
+  }
+  if (!is.integer(endCaret)) {
+    if (is.numeric(endCaret)) {
+      endCaret <- as.integer(endCaret)
+    } else {
+      stop("'endCaret' must be a single numeric value specifying the end location in of the statement in the document.")
+    }
+  }
+  if (!is.character(statementType) && !is.numeric(statementType)) {
+    stop("'statementType' must be a numeric ID of the statement type or a character object indicating the name of the statement type.")
+  } else if (is.numeric(statementType) && !is.integer(statementType)) {
+    statementType <- as.integer(statementType)
+  }
+  if (!is.integer(coder)) {
+    if (is.numeric(coder)) {
+      coder <- as.integer(coder)
+    } else {
+      stop("The coder must be provided as a numeric object (see dna_getCoders).")
+    }
+  }
+  ellipsis <- list(...)
+  ellipsis <- lapply(ellipsis, function(x) {
+    if (is.logical(x)) {
+      if (x == TRUE) {
+        x <- 1
+      } else if (x == FALSE) {
+        x <- 0
+      }
+    }
+    if (is.numeric(x)) {
+      x <- as.integer(x)
+    }
+    if (!class(x) %in% c("character", "integer", "logical")) {
+      stop("All supplied values must be character, integer, or logical.")
+    }
+    if (length(x) != 1) {
+      stop("All supplied values must be of length 1.")
+    }
+    return(x)
+  })
+
+  varNames <- names(ellipsis)
+  values <- .jarray(
+    lapply(
+      ellipsis,
+      function(x) {
+        if (is.character(x)) {
+          .jnew("java/lang/String", x)
+        } else if (is.integer(x)) {
+          .jnew("java/lang/Integer", x)
+        } else {
+          stop("Unsupported type")
+        }
+      }
+    ),
+    contents.class = "java/lang/Object"
+  )
+
+  id <- .jcall(dna_api(),
+               "I",
+               "addStatement",
+               documentID,
+               startCaret,
+               endCaret,
+               statementType,
+               coder,
+               varNames,
+               values)
+  return(id)
 }

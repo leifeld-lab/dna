@@ -516,8 +516,9 @@ public class MainWindow extends JFrame {
 									selectionEnd,
 									statementType.getId(),
 									Dna.sql.getActiveCoder().getId(),
-									statementType.getVariables());
-							int statementId = Dna.sql.addStatement(statement, documentId);
+									statementType.getVariables(),
+									documentId);
+							int statementId = Dna.sql.addStatement(statement);
 							if (statementId > 0) {
 								documentTableModel.increaseFrequency(documentId);
 								textPanel.paintStatements();

@@ -14,7 +14,6 @@ cleanup_dna_database <- function(samp) {
 }
 
 test_that("dna_phaseTransitions produces expected output with help file example", {
-  testthat::skip_on_cran()
   testthat::skip_on_ci()
   samp <- setup_dna_database()
   results <- dna_phaseTransitions(distanceMethod = "spectral",

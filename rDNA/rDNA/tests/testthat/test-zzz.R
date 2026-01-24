@@ -5,4 +5,5 @@ teardown({
   unlink("profile.dnc")
   unlink("test.dna")
   unlink("java/*.jar")
+  expect_false(file.exists("sample.dna"))
 })

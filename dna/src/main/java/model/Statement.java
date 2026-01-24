@@ -77,13 +77,15 @@ public class Statement implements Comparable<Statement> {
 	 * @param statementTypeId  Statement type ID.
 	 * @param coderId          The ID of the coder who owns the statement.
 	 * @param values           An array list with variable contents.
+	 * @param documentId       The document ID.
 	 */
-	public Statement(int start, int stop, int statementTypeId, int coderId, ArrayList<Value> values) {
+	public Statement(int start, int stop, int statementTypeId, int coderId, ArrayList<Value> values, int documentId) {
 		this.start = start;
 		this.stop = stop;
 		this.statementTypeId = statementTypeId;
 		this.coderId = coderId;
 		this.values = values;
+		this.documentId = documentId;
 	}
 	
 	/**
@@ -269,7 +271,7 @@ public class Statement implements Comparable<Statement> {
 	 * 
 	 * @param start The new character start position in the text.
 	 */
-	void setStart(int start) {
+	public void setStart(int start) {
 		this.start = start;
 	}
 
@@ -287,7 +289,7 @@ public class Statement implements Comparable<Statement> {
 	 * 
 	 * @param stop The new character end position in the text.
 	 */
-	void setStop(int stop) {
+	public void setStop(int stop) {
 		this.stop = stop;
 	}
 	

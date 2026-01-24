@@ -8,6 +8,8 @@ import me.tongfei.progressbar.ProgressBar;
 import model.Color;
 import model.Entity;
 import model.Statement;
+import model.StatementType;
+import model.Value;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -15,8 +17,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import java.util.HashSet;
 
 public class DataExchange {
 
@@ -620,6 +621,7 @@ public class DataExchange {
 
         // Standard columns
         ArrayList<Object> ids = new ArrayList<>();
+        ArrayList<Object> statementTypeIds = new ArrayList<>();
         ArrayList<Object> docIds = new ArrayList<>();
         ArrayList<Object> starts = new ArrayList<>();
         ArrayList<Object> stops = new ArrayList<>();
@@ -646,6 +648,7 @@ public class DataExchange {
 
         for (Statement s : statements) {
             ids.add(s.getId());
+            statementTypeIds.add(statementTypeId);
             docIds.add(s.getDocumentId());
             starts.add(s.getStart());
             stops.add(s.getStop());
@@ -662,6 +665,7 @@ public class DataExchange {
 
         // Add standard columns
         df.addColumn("ID", "int", ids);
+        df.addColumn("statement_type_id", "int", statementTypeIds);
         df.addColumn("document_id", "int", docIds);
         df.addColumn("start", "int", starts);
         df.addColumn("stop", "int", stops);
@@ -700,4 +704,537 @@ public class DataExchange {
         }
         return getStatements(statementTypeId, statementIds);
     }
+
+	/**
+	 * Add a new statement with custom contents to the database. Entities can be null. Entity IDs will be disregarded; entities are matched with the database using their values.
+	 * 
+	 * @param documentId       The document ID of the document to which the statement should be added.
+	 * @param startCaret       The start position of the statement in the document.
+	 * @param endCaret         The stop position of the statement in the document.
+	 * @param statementTypeId  The ID of the statement type of which the statement to be created is an instance.
+	 * @param coderId          The ID of the coder that adds the current statement.
+	 * @param varNames         The variable names to which the values should be added, in the same order as the values.
+	 * @param values           The values to be added to the statement variables as an {@link Object} array.
+	 * @return                 A new ID of the statement that was added.
+	 */
+	static public int addStatement(int documentId, int startCaret, int endCaret, int statementTypeId, int coderId, String[] varNames, Object[] values) {
+        StatementType st = Dna.sql.getStatementType(statementTypeId);
+
+        HashSet<String> varNamesAdded = new HashSet<>();
+		
+		ArrayList<Value> valuesList = new ArrayList<Value>();
+		for (int i = 0; i < varNames.length; i++) {
+            boolean found = false;
+			for (int j = 0; j < st.getVariables().size(); j++) {
+                if (st.getVariables().get(j).getKey().equals(varNames[i])) {
+                    found = true;
+                    if (varNamesAdded.contains(varNames[i])) {
+                        Dna.logger.log(new LogEvent(Logger.WARNING, "Variable '" + varNames[i] + "' already added.", "The variable '" + varNames[i] + "' with value '" + values[i] + "' was already added to the statement. This variable will be ignored."));
+                        break;
+                    }
+                    String dataType = st.getVariables().get(j).getDataType();
+                    int variableId = st.getVariables().get(j).getVariableId();
+                    Value v = null;
+                    if (dataType.equals("short text")) {
+                        Entity entity = new Entity((String) values[i]);
+                        v = new Value(variableId, varNames[i], dataType, entity);
+                    } else if (dataType.equals("long text")) {
+                        v = new Value(variableId, varNames[i], dataType, (String) values[i]);
+                    } else if (dataType.equals("integer") || dataType.equals("boolean")) {
+                        if (dataType.equals("boolean") && (int) values[i] > 1) {
+                            Dna.logger.log(new LogEvent(Logger.WARNING, "Invalid boolean value for variable '" + varNames[i] + "'.", "The variable '" + varNames[i] + "' is of type 'boolean' but was assigned the invalid value '" + values[i] + "'. Replacing value by 1 (true)."));
+                            values[i] = 1;
+                        } else if (dataType.equals("boolean") && (int) values[i] < 0) {
+                            Dna.logger.log(new LogEvent(Logger.WARNING, "Invalid boolean value for variable '" + varNames[i] + "'.", "The variable '" + varNames[i] + "' is of type 'boolean' but was assigned the invalid value '" + values[i] + "'. Replacing value by 0 (false)."));
+                            values[i] = 0;
+                        }
+                        v = new Value(variableId, varNames[i], dataType, (int) values[i]);
+                    }
+                    valuesList.add(v);
+                    varNamesAdded.add(varNames[i]);
+                    break;
+                }
+            }
+            if (!found) {
+                Dna.logger.log(new LogEvent(Logger.WARNING, "Variable '" + varNames[i] + "' not found in statement type '" + st.getLabel() + "'.", "The variable '" + varNames[i] + "' was not found in the statement type '" + st.getLabel() + "'. This variable will be ignored."));
+            }
+		}
+        for (int i = 0; i < st.getVariables().size(); i++) {
+            if (!varNamesAdded.contains(st.getVariables().get(i).getKey())) {
+                Value v = new Value(st.getVariables().get(i));
+                valuesList.add(v);
+            }
+        }
+		Statement s = new Statement(startCaret, endCaret, statementTypeId, coderId, valuesList, documentId);
+        int statementId = Dna.sql.addStatement(s);
+        return statementId;
+	}
+
+    /**
+	 * Update the list of statements based on an array of arrays for the statement data.
+	 * 
+	 * @param statements  Array of objects containing statement IDs, statement type IDs, document IDs, start carets, stop carets, coder IDs, and further variables defined in the statement type.
+	 * @param verbose     Should statistics on updating process be reported?
+	 * @throws Exception
+	 */
+    /*
+	public void setStatements(Object[] statements, DataFrame data, boolean verbose) throws Exception {
+        
+		// find out which variables are in the table and what data types they have, based on the first entry
+        final StatementType statementType = Dna.sql.getStatementType((int) data.getValue(0, 2));
+        final ArrayList<Statement> statementsInDatabase = Dna.sql.getStatements(null, statementType.getId(), null, null, null, false, null, false, null, false, null, false);
+        final ArrayList<Integer> statementIDs = data.getVariable(0)
+            .stream()
+            .map(s -> (Integer) s)
+            .collect(Collectors.toCollection(ArrayList::new));
+
+        // 1. delete statements that are not in the data frame
+        int[] toDelete = statementsInDatabase
+            .stream()
+            .filter(s -> !statementIDs.contains(s.getId()))
+            .mapToInt(s -> s.getId())
+            .toArray();
+        if (toDelete.length > 0) {
+            if (verbose) {
+				System.out.print("Deleting " + toDelete.length + " statement(s)... ");
+			}
+            Dna.sql.deleteStatements(toDelete);
+			if (verbose == true) {
+				System.out.println("Done.");
+			}
+        }
+
+        // 2. move statements to different document IDs, caret positions, or coders
+        ArrayList<Statement> statementsToUpdate = new ArrayList<>();
+		for (int i = 0; i < data.nrow(); i++) {
+            for (int j = 0; j < statementsInDatabase.size(); j++) {
+                if (statementsInDatabase.get(j).getId() == (Integer) data.getValue(i, 0) && // identify statement by ID
+                        (statementsInDatabase.get(j).getDocumentId() != (Integer) data.getValue(i, 2) || // if any of the fields are different, update
+                         statementsInDatabase.get(j).getStart() != (Integer) data.getValue(i, 3) ||
+                         statementsInDatabase.get(j).getStop() != (Integer) data.getValue(i, 4) ||
+                         statementsInDatabase.get(j).getCoderId() != (Integer) data.getValue(i, 5))) {
+                    Statement statement = new Statement(statementsInDatabase.get(j)); // deep copy of the statement, then update fields
+                    statement.setDocumentId((Integer) data.getValue(i, 2));
+                    statement.setStart((Integer) data.getValue(i, 3));
+                    statement.setStop((Integer) data.getValue(i, 4));
+                    statement.setCoderId((Integer) data.getValue(i, 5));
+                    for (int k = 6; k < data.ncol(); k++) { // update all variables
+                        String variableName = data.getVariableName(k);
+                        String dataType = statement.getValueByKey(variableName).getDataType();
+                        if (dataType.equals("short text") || dataType.equals("long text")) {
+                            // if the variable is a short or long text, it is an entity, so we need to create a new Entity object
+                            Entity entity = new Entity((String) data.getValue(i, k));
+                        statement.getValueByKey(variableName).setValue(data.getValue(i, k));
+
+
+                        if (statement.getValues().containsKey(variableName)) {
+                            statement.getValues().get(variableName).setValue(data.getValue(i, k));
+                        } else {
+                            // if the variable does not exist in the statement, add it
+                            statement.addValue(variableName, data.getValue(i, k));
+                        }
+                    }
+                    statementsToUpdate.add(statement);
+                }
+            }
+            if (verbose) {
+				System.out.print("Updating document ID, start/stop caret, or coder ID for " + statementsToMove.size() + " statement(s)... ");
+			}
+            Dna.sql.moveStatements(statementsToMove);
+			if (verbose == true) {
+				System.out.println("Done.");
+			}
+        }
+
+        // 3. update statement contents
+        ArrayList<Statement> statementsToUpdate = new ArrayList<>();
+		for (int i = 0; i < data.nrow(); i++) {
+            for (int j = 0; j < statementsInDatabase.size(); j++) {
+                if (statementsInDatabase.get(j).getId() == (Integer) data.getValue(i, 0)) {
+                    Statement statement = new Statement(statementsInDatabase.get(j)); // deep copy of the statement, then update fields
+                    statement.setDocumentId((Integer) data.getValue(i, 2));
+                    statement.setStart((Integer) data.getValue(i, 3));
+                    statement.setStop((Integer) data.getValue(i, 4));
+                    statement.setCoderId((Integer) data.getValue(i, 5));
+                    statementsToMove.add(statement);
+                }
+            }
+            if (verbose) {
+				System.out.print("Updating document ID, start/stop caret, or coder ID for " + statementsToMove.size() + " statement(s)... ");
+			}
+            Dna.sql.moveStatements(statementsToMove);
+			if (verbose == true) {
+				System.out.println("Done.");
+			}
+        }
+        */
+
+
+
+		/*
+        String[] varNames = new String[numVar];
+		String[] varTypes = new String[numVar];
+		int statementTypeId = statementTypeIDs[0];
+		StatementType st;
+		try {
+			st = this.data.getStatementTypeById(statementTypeId);
+		} catch (NullPointerException npe) {
+			throw new Exception("Statement type ID of the first statement was not found in the database. Aborting.");
+		}
+		LinkedHashMap<String, String> variables = st.getVariables();
+		Iterator<String> iterator = variables.keySet().iterator();
+		int counter = 0;
+		while (iterator.hasNext()) {
+			String key = iterator.next();
+			varNames[counter] = key;
+			varTypes[counter] = variables.get(key);
+			counter++;
+		}
+		if (counter != numVar) {
+			throw new Exception("Number of variables in the data frame does not match the number of variables in the statement type definition. Aborting.");
+		}
+		*/
+		/*
+		// add or update statements
+		for (int i = 0; i < data.nrow(); i++) {
+			boolean update = false;
+
+			// check if statement ID exists in database
+            int foundIndex = -1;
+            for (int j = 0; j < statementsInDatabase.size(); j++) {
+                if (statementsInDatabase.get(j).getId() == (Integer) data.getValue(i, 0)) {
+                    foundIndex = j;
+                    break;
+                }
+            }
+
+			// check if coder field is valid
+			if (this.data.getCoderById(coder[i]) == null) {
+				System.err.println("Statement ID " + id[i] + ": coder ID is invalid. Skipping this statement.");
+			}
+
+			// check if the document ID is valid
+			if (this.data.getDocument(documentId[i]) == null) {
+				System.err.println("Statement ID " + id[i] + ": document ID was not found in the database. Skipping this statement.");
+			}
+						
+			// check if start caret < end caret
+			if (startCaret[i] >= endCaret[i]) {
+				System.err.println("Statement ID " + id[i] + ": end caret is not greater than the start caret, meaning the statement would have zero or negative length. Skipping this statement.");
+			}
+			
+			// check if document length is shorter than the supplied start caret
+			if (this.data.getDocument(documentId[i]).getText().length() - 1 < startCaret[i]) {
+				System.err.println("Statement ID " + id[i] + ": start caret would be after the last character of the document. Skipping this statement.");
+			}
+
+			// check if document length is shorter than the supplied end caret
+			if (this.data.getDocument(documentId[i]).getText().length() < endCaret[i]) {
+				System.err.println("Statement ID " + id[i] + ": end caret would be more than one character after the last character of the document. Skipping this statement.");
+			}
+			
+			// check if statement type matches the first statement type in the 'statements' data frame
+			if (statementTypeId != statementTypeIDs[i]) {
+				System.err.println("Statement ID " + id[i] + ": statement type ID is not identical to the first statement type ID in the data frame. Skipping this statement.");
+			}
+			
+			// check if boolean variables are indeed 0 or 1
+			for (int j = 0; j < numVar; j++) {
+				if (varTypes[j].equals("boolean") && ((int[]) statements[j + 6])[i] != 0 && ((int[]) statements[j + 6])[i] != 1) {
+					System.err.println("Statement ID " + id[i] + ": variable '" + varNames[j] + "' is not 0 or 1. Skipping this statement.");
+				}
+			}
+			
+			if (foundIndex > -1) { // update (rather than add)
+				if (this.data.getStatements().get(foundIndex).getStart() != startCaret[i]) {
+					if (simulate == false) {
+						this.data.getStatements().get(foundIndex).setStart(startCaret[i]);
+					}
+					update = true;
+					updateCountStartCaret++;
+				}
+				if (this.data.getStatements().get(foundIndex).getStop() != endCaret[i]) {
+					if (simulate == false) {
+						this.data.getStatements().get(foundIndex).setStop(endCaret[i]);
+					}
+					update = true;
+					updateCountEndCaret++;
+				}
+				if (this.data.getStatements().get(foundIndex).getDocumentId() != documentId[i]) {
+					if (simulate == false) {
+						this.data.getStatements().get(foundIndex).setDocumentId(documentId[i]);
+					}
+					update = true;
+					updateCountDocumentId++;
+				}
+				if (this.data.getStatements().get(foundIndex).getCoder() != coder[i]) {
+					if (simulate == false) {
+						this.data.getStatements().get(foundIndex).setCoder(coder[i]);
+					}
+					update = true;
+					updateCountCoder++;
+				}
+				
+				// go through remaining variables and update where necessary
+				for (int j = 0; j < numVar; j++) {
+					if (varTypes[j].equals("short text") || varTypes[j].equals("long text")) {
+						String s = ((String[]) statements[j + 6])[i];
+						if (!this.data.getStatements().get(foundIndex).getValues().get(varNames[j]).equals(s)) {
+							if (simulate == false) {
+								// update variable in the database (in memory)
+								this.data.getStatements().get(foundIndex).getValues().put(varNames[j], s);
+							}
+							// also add a new attribute if the value doesn't exist yet in the database (in memory and SQL)
+							if (this.data.getAttributeId(s, varNames[j], statementTypeId) == -1 && !addedAttributes.get(j).contains(s)) {
+								if (verbose == true) {
+									System.out.print("  - New attribute for variable '" + varNames[j] + "': '" + s + "'... ");
+								}
+								int attributeId = this.data.generateNewId("attributes");
+								AttributeVector av = new AttributeVector(attributeId, s, "#000000", "", "", "", "", statementTypeId, varNames[j]);
+								if (simulate == false) {
+									this.data.attributes.add(av);
+									Collections.sort(this.data.getAttributes());
+									this.sql.upsertAttributeVector(av);
+								}
+								addedAttributes.get(j).add(s); // save added attributes in a list so they are not added multiple times in simulation mode
+								if (verbose == true) {
+									System.out.println("Done.");
+								}
+							}
+							update = true;
+							updateCountVariables[j]++;
+						}
+					} else {
+						if ((int) this.data.getStatements().get(foundIndex).getValues().get(varNames[j]) != ((int[]) statements[j + 6])[i]) {
+							if (simulate == false) {
+								this.data.getStatements().get(foundIndex).getValues().put(varNames[j], ((int[]) statements[j + 6])[i]);
+							}
+							update = true;
+							updateCountVariables[j]++;
+						}
+					}
+				}
+
+				if (update == true) {
+					if (verbose == true) {
+						System.out.print("  - Updating statement " + this.data.getStatements().get(foundIndex).getId() + "... ");
+					}
+					if (simulate == false) {
+						this.sql.upsertStatement(this.data.getStatements().get(foundIndex), st.getVariables());
+					}
+					if (verbose == true) {
+						System.out.println("Done.");
+					}
+				}
+			} else { // add (rather than update)
+				int newId = this.data.generateNewId("statements");
+				Statement statement = new Statement(newId, documentId[i], startCaret[i], endCaret[i], this.data.getDocument(documentId[i]).getDate(), statementTypeId, coder[i]);
+				for (int j = 0; j < numVar; j++) {
+					if (varTypes[j].equals("short text") || varTypes[j].equals("long text")) {
+						String s = ((String[]) statements[j + 6])[i];
+
+						// put value in statement (in memory)
+						statement.getValues().put(varNames[j], s);
+
+						// add a new attribute if the value doesn't exist yet in the database (in memory and SQL)
+						if (this.data.getAttributeId(s, varNames[j], statementTypeId) == -1 && !addedAttributes.get(j).contains(s)) {
+							if (verbose == true) {
+								System.out.print("  - New attribute for variable '" + varNames[j] + "': '" + s + "'... ");
+							}
+							int attributeId = this.data.generateNewId("attributes");
+							AttributeVector av = new AttributeVector(attributeId, s, "#000000", "", "", "", "", statementTypeId, varNames[j]);
+							if (simulate == false) {
+								this.data.attributes.add(av);
+								Collections.sort(this.data.getAttributes());
+								this.sql.upsertAttributeVector(av);
+							}
+							addedAttributes.get(j).add(s); // save added attributes in a list so they are not added multiple times in simulation mode
+							if (verbose == true) {
+								System.out.println("Done.");
+							}
+						}
+					} else { // attributes only exist for short or long text variables
+						statement.getValues().put(varNames[j], ((int[]) statements[j + 6])[i]);
+					}
+				}
+				if (verbose == true) {
+					System.out.print("  - Adding statement... ");
+				}
+				if (simulate == false) {
+					this.data.addStatement(statement);
+					System.out.print("New statement ID: " + statement.getId() + "... ");
+					this.sql.addStatement(statement, st.getVariables());
+				}
+				if (verbose == true) {
+					System.out.println("Done.");
+				}
+				updateCountNewStatements++;
+			}
+		}
+
+		// report statistics
+		if (verbose == true) {
+			System.out.println("New statements: " + updateCountNewStatements);
+			System.out.println("Deleted statements: " + updateCountDeleted);
+			System.out.println("Document IDs updated: " + updateCountDocumentId);
+			System.out.println("Start carets updated: " + updateCountStartCaret);
+			System.out.println("End carets updated: " + updateCountEndCaret);
+			System.out.println("Coders updated: " + updateCountCoder);
+			for (int i = 0; i < numVar; i++) {
+				System.out.println("Updated variable '" + varNames[i] + "': " + updateCountVariables[i]);
+			}
+		}
+	}
+    */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    /*
+    public static void setStatements(DataFrame df, boolean simulate, boolean verbose) throws Exception {
+        if (df == null || df.nrow() == 0) return;
+
+        ArrayList<String> varNames = df.getVariableNames();
+
+        // Standard columns
+        List<String> stdCols = List.of("ID", "document_id", "start", "stop", "statement_type_id", "coder_id");
+        for (String col : stdCols) {
+            if (!varNames.contains(col)) {
+                throw new IllegalArgumentException("Missing required column: " + col);
+            }
+        }
+
+        // Extract metadata from the first row
+        int statementTypeId = (Integer) df.getValue(0, "statement_type_id");
+        StatementType st = Dna.sql.getStatementType(statementTypeId);
+        if (st == null) {
+            throw new Exception("Statement type ID " + statementTypeId + " not found.");
+        }
+
+        LinkedHashMap<String, String> variableMeta = st.getVariables();
+        ArrayList<String> variableCols = new ArrayList<>(varNames);
+        variableCols.removeAll(stdCols);
+
+        if (variableCols.size() != variableMeta.size()) {
+            throw new Exception("Mismatch between DataFrame variables and statement type definition.");
+        }
+
+        ArrayList<Integer> dfIds = new ArrayList<>();
+        for (int i = 0; i < df.nrow(); i++) {
+            dfIds.add((Integer) df.getValue(i, "ID"));
+        }
+
+        // 1. Identify statements to delete
+        int[] toDelete = Dna.sql.getStatements(null, statementTypeId, null, null, null, false, null, false, null, false, null, false)
+            .stream()
+            .filter(s -> !dfIds.contains(s.getId()))
+            .mapToInt(s -> s.getId())
+            .toArray();
+        if (!simulate && toDelete.length > 0) {
+            if (verbose) System.out.println("Deleting " + toDelete.length + " statements.");
+        } else if (verbose) {
+            System.out.println("No statements to delete.");
+        }
+        if (toDelete.length > 0) {
+            if (!simulate) {
+                Dna.sql.deleteStatements(toDelete);
+            }
+        }
+
+
+
+        // 2. Add or update statements
+        for (int i = 0; i < df.nrow(); i++) {
+            int id = (Integer) df.getValue(i, "ID");
+            int docId = (Integer) df.getValue(i, "document_id");
+            int start = (Integer) df.getValue(i, "start");
+            int stop = (Integer) df.getValue(i, "stop");
+            int coderId = (Integer) df.getValue(i, "coder_id");
+
+            if (Dna.data.getCoderById(coderId) == null || Dna.data.getDocument(docId) == null) {
+                if (verbose) System.err.println("Invalid coder or document for statement ID " + id + ". Skipping.");
+                continue;
+            }
+
+            if (start >= stop || stop > Dna.data.getDocument(docId).getText().length()) {
+                if (verbose) System.err.println("Invalid caret range for statement ID " + id + ". Skipping.");
+                continue;
+            }
+
+            Statement existing = Dna.data.getStatementById(id);
+            boolean isNew = existing == null;
+
+            Statement s = new Statement(id, docId, start, stop,
+                    Dna.data.getDocument(docId).getDate(), statementTypeId, coderId);
+
+            for (String var : variableCols) {
+                Object val = df.getValue(i, var);
+                String type = variableMeta.get(var);
+
+                if (type.equals("short text")) {
+                    Entity e = Dna.sql.getOrInsertEntity(var, (String) val, statementTypeId);
+                    s.getValues().add(new Value(var, e, "short text"));
+                } else if (type.equals("long text")) {
+                    s.getValues().add(new Value(var, val, "long text"));
+                } else if (type.equals("boolean")) {
+                    int b = ((Number) val).intValue();
+                    if (b != 0 && b != 1) {
+                        if (verbose) System.err.println("Invalid boolean value for statement ID " + id);
+                        continue;
+                    }
+                    s.getValues().add(new Value(var, b, "boolean"));
+                } else if (type.equals("integer")) {
+                    s.getValues().add(new Value(var, ((Number) val).intValue(), "integer"));
+                }
+            }
+
+            if (simulate) {
+                if (verbose) System.out.println((isNew ? "Simulate add" : "Simulate update") + " for statement ID " + id);
+            } else {
+                if (isNew) {
+                    Dna.sql.addStatement(s, variableMeta);
+                } else {
+                    Dna.sql.upsertStatement(s, variableMeta);
+                }
+                Dna.data.addOrUpdateStatement(s);
+                if (verbose) System.out.println((isNew ? "Added" : "Updated") + " statement ID " + id);
+            }
+        }
+    }
+    */
 }

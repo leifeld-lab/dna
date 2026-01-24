@@ -2236,16 +2236,15 @@ public class Sql {
 	 * ====================================================================== */
 
 	/**
-	 * Add a statement (with variable values) to the database.
+	 * Add a statement (with variable values) to the database. Entity IDs are disregarded and inferred from the String values in the statement or created if no entity with that value exists yet.
 	 * 
 	 * @param statement   A {@link model.Statement Statement} object, including
 	 *   the values for the different variables.
-	 * @param documentId  The ID of the document in which the statement is
-	 *   nested.
 	 * @return            The generated statement ID of the new statement.
 	 */
-	public int addStatement(Statement statement, int documentId) {
+	public int addStatement(Statement statement) {
 		long statementId = -1, entityId = -1, attributeVariableId = -1;
+		int documentId = statement.getDocumentId();
 		try (Connection conn = ds.getConnection();
 				PreparedStatement s1 = conn.prepareStatement("INSERT INTO STATEMENTS (StatementTypeId, DocumentId, Start, Stop, Coder) VALUES (?, ?, ?, ?, ?);", PreparedStatement.RETURN_GENERATED_KEYS);
 				PreparedStatement s2 = conn.prepareStatement("INSERT INTO DATASHORTTEXT (StatementId, VariableId, Entity) VALUES (?, ?, ?);");
@@ -2416,6 +2415,110 @@ public class Sql {
 			Dna.logger.log(l);
 		}
 		return (int) statementId;
+	}
+
+	/**
+	 * Move a batch of statements to a new document and/or modify the start and stop caret positions and/or coder ID.
+	 * 
+	 * @param statements  An ArrayList of {@link model.Statement Statement} objects to be moved.
+	 */
+	public void moveStatements(ArrayList<Statement> statements) {
+		try (Connection conn = ds.getConnection();
+				PreparedStatement s1 = conn.prepareStatement("UPDATE STATEMENTS SET DocumentId = ?, Start = ?, Stop = ?, Coder = ? WHERE ID = ?;");
+				PreparedStatement s2 = conn.prepareStatement("SELECT Text FROM DOCUMENTS WHERE ID = ?;");
+				PreparedStatement s3 = conn.prepareStatement("SELECT DocumentId, Start, Stop, Coder FROM STATEMENTS WHERE ID = ?;");
+				PreparedStatement s4 = conn.prepareStatement("SELECT ID FROM CODERS;");
+				SQLCloseable finish = conn::rollback) {
+			LogEvent l = new LogEvent(Logger.MESSAGE,
+					"[SQL] Started SQL transaction to recode " + statements.size() + " statements.",
+					"Started a new SQL transaction to recode " + statements.size() + " statements in the database. The contents will not be written into the database until the transaction is committed.");
+			Dna.logger.log(l);
+			conn.setAutoCommit(false);
+			ResultSet r3 = s4.executeQuery();
+			ArrayList<Integer> coders = new ArrayList<>();
+			while (r3.next()) {
+				coders.add(r3.getInt("ID"));
+			}
+			for (int i = 0; i < statements.size(); i++) {
+				LogEvent l2 = new LogEvent(Logger.MESSAGE,
+						"[SQL]  ├─ Recoding Statement " + statements.get(i).getId() + ".",
+						"Recoding Statement " + statements.get(i).getId() + " in the database with new Document ID " + statements.get(i).getDocumentId() + ", start caret position " + statements.get(i).getStart() + ", end caret position " + statements.get(i).getStop() + ", and coder ID " + statements.get(i).getCoderId() + ".");
+				Dna.logger.log(l2);
+				// check 1: any changes?
+				s3.setInt(1, statements.get(i).getId());
+				ResultSet r = s3.executeQuery();
+				if (r.next()) {
+					int oldDocumentId = r.getInt("DocumentId");
+					int oldStart = r.getInt("Start");
+					int oldStop = r.getInt("Stop");
+					int oldCoderId = r.getInt("Coder");
+					if (oldDocumentId == statements.get(i).getDocumentId() && oldStart == statements.get(i).getStart() && oldStop == statements.get(i).getStop() && oldCoderId == statements.get(i).getCoderId()) {
+						// nothing to do, statement is already in the right place
+						LogEvent l3 = new LogEvent(Logger.MESSAGE,
+								"[SQL]  ├─ Statement " + statements.get(i).getId() + " is already in the right place.",
+								"Statement " + statements.get(i).getId() + " is already in the right place in the database, with Document ID " + statements.get(i).getDocumentId() + ", start caret position " + statements.get(i).getStart() + ", end caret position " + statements.get(i).getStop() + ", and coder ID " + statements.get(i).getCoderId() + ".");
+						Dna.logger.log(l3);
+						continue;
+					}
+					// check 2: document ID, start and stop caret positions valid?
+					s2.setInt(1, statements.get(i).getDocumentId());
+					ResultSet r2 = s2.executeQuery();
+					if (r2.next()) {
+						String text = r2.getString("Text");
+						// check if the start and stop caret positions are within the text of the document
+						if (statements.get(i).getStart() < 0 || statements.get(i).getStop() < 0 || statements.get(i).getStart() > text.length() || statements.get(i).getStop() > text.length()) {
+							LogEvent l4 = new LogEvent(Logger.WARNING,
+									"[SQL]  ├─ Statement " + statements.get(i).getId() + " has invalid caret positions.",
+									"Statement " + statements.get(i).getId() + " has invalid caret positions: start caret position " + statements.get(i).getStart() + ", end caret position " + statements.get(i).getStop() + ". Omitting this statement.");
+							Dna.logger.log(l4);
+							continue;
+						}
+					} else {
+						LogEvent l6 = new LogEvent(Logger.WARNING,
+								"[SQL]  ├─ Statement " + statements.get(i).getId() + " has invalid document ID.",
+								"Statement " + statements.get(i).getId() + " has an invalid document ID: " + statements.get(i).getDocumentId() + ". Omitting this statement.");
+						Dna.logger.log(l6);
+						continue;
+					}
+				} else {
+					LogEvent l7 = new LogEvent(Logger.WARNING,
+							"[SQL]  ├─ Statement " + statements.get(i).getId() + " does not exist.",
+							"Statement " + statements.get(i).getId() + " does not exist in the database. Omitting this statement.");
+					Dna.logger.log(l7);
+					continue;
+				}
+				// check 3: coder ID valid?
+				if (statements.get(i).getCoderId() < 1 || !coders.contains(statements.get(i).getCoderId())) {
+					// if the coder ID is not in the list of coders, it is invalid
+					LogEvent l9 = new LogEvent(Logger.WARNING,
+							"[SQL]  ├─ Statement " + statements.get(i).getId() + " has invalid coder ID.",
+							"Statement " + statements.get(i).getId() + " has an invalid coder ID: " + statements.get(i).getCoderId() + ". Omitting this statement.");
+					Dna.logger.log(l9);
+					continue;
+				}
+				s1.setInt(1, statements.get(i).getDocumentId());
+				s1.setInt(2, statements.get(i).getStart());
+				s1.setInt(3, statements.get(i).getStop());
+				s1.setInt(4, statements.get(i).getCoderId());
+				s1.setInt(5, statements.get(i).getId());
+				s1.executeUpdate();
+				LogEvent l5 = new LogEvent(Logger.MESSAGE,
+						"[SQL]  ├─ Statement " + statements.get(i).getId() + " was recoded in the database.",
+						"Statement " + statements.get(i).getId() + " was recoded in the database with new Document ID " + statements.get(i).getDocumentId() + ", start caret position " + statements.get(i).getStart() + ", end caret position " + statements.get(i).getStop() + ", and coder ID " + statements.get(i).getCoderId() + ".");
+				Dna.logger.log(l5);
+			}
+			conn.commit();
+			LogEvent l8 = new LogEvent(Logger.MESSAGE,
+					"[SQL]  └─ Completed SQL transaction to recode " + statements.size() + " statements.",
+					"Completed SQL transaction to recode " + statements.size() + " statements in the database. The contents have been written into the database.");
+			Dna.logger.log(l8);
+		} catch (SQLException e) {
+			LogEvent e2 = new LogEvent(Logger.ERROR,
+					"Statements could not be recoded in the database.",
+					"Tried to recode the document ID, start and end caret positions, and coder ID of " + statements.size() + " statements, but something went wrong. The transaction has been rolled back, and nothing has been changed in the database.",
+					e);
+			Dna.logger.log(e2);
+		}
 	}
 
 	/**

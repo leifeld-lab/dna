@@ -2092,7 +2092,7 @@ public class Exporter {
 			}
 		} else if (kernel.equals("epanechnikov")) {
 			if (diff_std >= -1 && diff_std <= 1) {
-				return 0.75 * (1.0 - diff_std) * (1.0 - diff_std);
+				return 0.75 * (1.0 - (diff_std * diff_std));
 			} else {
 				return 0.0;
 			}

@@ -1,7 +1,6 @@
 context("data access")
 
 test_that("DNA can use databases and profiles", {
-  testthat::skip_on_cran()
   testthat::skip_on_ci()
   s <- dna_sample(overwrite = TRUE)
   expect_equal(dim(dna_queryCoders("sample.dna")), c(4, 3))
@@ -33,7 +32,6 @@ test_that("dna_sample works", {
 })
 
 test_that("attribute management works", {
-  testthat::skip_on_cran()
   testthat::skip_on_ci()
   samp <- dna_sample(overwrite = TRUE)
   dna_openDatabase(samp, coderId = 1, coderPassword = "sample")
@@ -52,19 +50,46 @@ test_that("attribute management works", {
 })
 
 test_that("statement management works", {
-  testthat::skip_on_cran()
   testthat::skip_on_ci()
   samp <- dna_sample(overwrite = TRUE)
   dna_openDatabase(samp, coderId = 1, coderPassword = "sample")
+
+  # dna_getStatements
   expect_no_error(st <- dna_getStatements())
   expect_s3_class(st, "dna_statements")
   expect_equal(nrow(st), 40)
-  expect_equal(ncol(st), 9)
-  expect_equal(colnames(st), c("ID", "document_id", "start", "stop", "coder_id", "person", "organization", "concept", "agreement"))
-  expect_equal(as.character(sapply(st, class)), c("integer", "integer", "integer", "integer", "integer", "character", "character", "character", "integer"))
-  expect_equal(st[2, 6], "Joel Bluestein")
-  expect_equal(st[15, 8], "There should be legislation to regulate emissions.")
+  expect_equal(ncol(st), 10)
+  expect_equal(colnames(st), c("ID", "statement_type_id", "document_id", "start", "stop", "coder_id", "person", "organization", "concept", "agreement"))
+  expect_equal(as.character(sapply(st, class)), c("integer", "integer", "integer", "integer", "integer", "integer", "character", "character", "character", "integer"))
+  expect_equal(st[2, 7], "Joel Bluestein")
+  expect_equal(st[15, 9], "There should be legislation to regulate emissions.")
   expect_equal(st, dna_getStatements(statementType = "DNA Statement", statementIds = numeric()))
+
+  # dna_addStatement
+  doc_id <- max(st$document_id)
+  last_statement_id <- max(st$ID)
+  expect_no_condition(id <- dna_addStatement(documentID = doc_id, startCaret = 10, endCaret = 50, statementType = 1, coder = 2, organization = "Sierra Club", concept = "some new concept", agreement = 0))
+  st_new <- dna_getStatements()
+  expect_equal(last_statement_id + 1, id)
+  expect_equal(max(st_new$ID), id)
+  expect_equal(st_new$statement_type_id[st_new$ID == id], 1)
+  expect_equal(st_new$document_id[st_new$ID == id], doc_id)
+  expect_equal(st_new$start[st_new$ID == id], 10)
+  expect_equal(st_new$stop[st_new$ID == id], 50)
+  expect_equal(st_new$coder_id[st_new$ID == id], 2)
+  expect_equal(st_new$person[st_new$ID == id], "")
+  expect_equal(st_new$organization[st_new$ID == id], "Sierra Club")
+  expect_equal(st_new$concept[st_new$ID == id], "some new concept")
+  expect_equal(st_new$agreement[st_new$ID == id], 0)
+  expect_no_condition(id <- dna_addStatement(documentID = doc_id, startCaret = 10, endCaret = 50, statementType = 1, coder = 2, organization = "Sierra Club", concept = "some new concept", agreement = FALSE))
+  st_new <- dna_getStatements()
+  expect_equal(id, last_statement_id + 2)
+  expect_equal(st_new$agreement[st_new$ID == id], 0)
+  expect_no_condition(id <- dna_addStatement(documentID = doc_id, startCaret = 10, endCaret = 50, statementType = 1, coder = 2, organization = "Sierra Club", concept = "some new concept", agreement = 3))
+  st_new <- dna_getStatements()
+  expect_equal(st_new$agreement[st_new$ID == id], 1)
+  expect_error(id <- dna_addStatement(documentID = doc_id, startCaret = 10, endCaret = 50, statementType = 1, coder = 2, organization = 25, concept = "some new concept", agreement = FALSE), "java.lang.ClassCastException")
+
   dna_closeDatabase()
   unlink("sample.dna")
 })

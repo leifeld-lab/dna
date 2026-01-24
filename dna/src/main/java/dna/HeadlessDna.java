@@ -7,6 +7,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -20,6 +21,7 @@ import dna.export.*;
 import logger.LogEvent;
 import logger.Logger;
 import model.Coder;
+import model.Statement;
 import model.StatementType;
 import sql.ConnectionProfile;
 import sql.Sql;
@@ -1196,7 +1198,7 @@ public class HeadlessDna implements Logger.LogListener {
 	 * @param df A data frame with entities and attributes, as defined in {@link sql.DataExchange#getAttributes(int)}.
 	 * @param simulate If {@code true}, the changes are rolled back. If {@code false}, the changes are committed to the database.
 	 */
-	public void setAttributes(int variableId, DataFrame df, boolean simulate) {
+	public void setAttributes2(int variableId, DataFrame df, boolean simulate) {
 		sql.DataExchange.getAttributes(variableId);
 
 		LogEvent l = new LogEvent(Logger.MESSAGE,
@@ -1265,6 +1267,34 @@ public class HeadlessDna implements Logger.LogListener {
 		return df;
 	}
 
+	/**
+	 * Add a new statement with custom contents to the database. Entities can be null. Entity IDs will be disregarded; entities are matched with the database using their values.
+	 * 
+	 * @param documentId       The document ID of the document to which the statement should be added.
+	 * @param startCaret       The start position of the statement in the document.
+	 * @param endCaret         The stop position of the statement in the document.
+	 * @param statementTypeId  The ID of the statement type of which the statement to be created is an instance.
+	 * @param coderId          The ID of the coder that adds the current statement.
+	 * @param varNames         The variable names to which the values should be added, in the same order as the values.
+	 * @param values           The values to be added to the statement variables as an {@link Object} array.
+	 * @return                 A new ID of the statement that was added.
+	 */
+	public int addStatement(int documentId, int startCaret, int endCaret, int statementTypeId, int coderId, String[] varNames, Object[] values) {
+		int statementId = sql.DataExchange.addStatement(documentId, startCaret, endCaret, statementTypeId, coderId, varNames, values);
+		if (statementId == -1) {
+			LogEvent l = new LogEvent(Logger.ERROR,
+					"Statement could not be added.",
+					"The new statement could not be added to the database. Please check the provided parameters and the database connection.");
+			Dna.logger.log(l);
+		} else {
+			LogEvent l = new LogEvent(Logger.MESSAGE,
+					"Statement has been added.",
+					"The new statement with ID " + statementId + " has been successfully added to the database.");
+			Dna.logger.log(l);
+		}
+		return statementId;
+	}
+	
 	/**
 	 * Get the {@link Exporter} object that contains the results.
 	 *
