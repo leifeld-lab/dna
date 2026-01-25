@@ -2,6 +2,9 @@ package dna;
 
 import java.io.File;
 import java.io.PrintStream;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -1192,20 +1195,93 @@ public class HeadlessDna implements Logger.LogListener {
 	}
 
 	/**
-	 * Set entities and attributes for a specific variable.
-	 *
-	 * @param variableId ID of the variable to modify the entities and their attributes for.
-	 * @param df A data frame with entities and attributes, as defined in {@link sql.DataExchange#getAttributes(int)}.
-	 * @param simulate If {@code true}, the changes are rolled back. If {@code false}, the changes are committed to the database.
-	 */
-	public void setAttributes2(int variableId, DataFrame df, boolean simulate) {
-		sql.DataExchange.getAttributes(variableId);
+ 	 * Set entities and attributes for a variable identified by its variable ID.
+ 	 *
+ 	 * <p>The supplied {@link DataFrame} must contain {@code m + 3} columns:
+ 	 * <ul>
+ 	 *   <li>column 0: entity ID (int)</li>
+ 	 *   <li>column 1: entity value (String)</li>
+ 	 *   <li>column 2: entity color (hex RGB String, e.g. {@code "#AABBCC"})</li>
+ 	 *   <li>columns 3..m+2: attribute variable values (String)</li>
+ 	 * </ul>
+ 	 *
+ 	 * @param variableId The ID of the variable for which entities and attributes should be updated.
+ 	 * @param df A {@link DataFrame} containing entity IDs, values, colors, and attribute values.
+ 	 * @param simulate If {@code true}, all changes are rolled back after execution. If {@code false}, changes are committed to the database.
+ 	 */
+	public void setAttributes(int variableId, DataFrame df, boolean simulate) {
+		sql.DataExchange.setAttributes(variableId, df, simulate);
 
-		LogEvent l = new LogEvent(Logger.MESSAGE,
-				"Attributes and entities have been set.",
-				"The entities (with attributes) for Variable " + variableId + " have been successfully updated.");
+		LogEvent l = new LogEvent(
+				Logger.MESSAGE,
+				"Attributes updated.",
+				simulate
+						? "Attribute updates were simulated."
+						: "Attribute updates were committed.");
 		Dna.logger.log(l);
 	}
+
+	/**
+	 * Set entities and attributes for a variable with statement type ID and variable name.
+	 * 
+	 * <p>The supplied {@link DataFrame} must contain {@code m + 3} columns:
+ 	 * <ul>
+ 	 *   <li>column 0: entity ID (int)</li>
+ 	 *   <li>column 1: entity value (String)</li>
+ 	 *   <li>column 2: entity color (hex RGB String, e.g. {@code "#AABBCC"})</li>
+ 	 *   <li>columns 3..m+2: attribute variable values (String)</li>
+ 	 * </ul>
+ 	 *
+ 	 * @param statementTypeId The ID of the statement type in which the variable is defined.
+     * @param variable The name of the variable whose entities and attributes should be updated.
+ 	 * @param df A {@link DataFrame} containing entity IDs, values, colors, and attribute values.
+ 	 * @param simulate If {@code true}, all changes are rolled back after execution. If {@code false}, changes are committed to the database.
+	 */
+	public void setAttributes(int statementTypeId, String variable, DataFrame df, boolean simulate) {
+		sql.DataExchange.setAttributes(statementTypeId, variable, df, simulate);
+
+		LogEvent l = new LogEvent(
+				Logger.MESSAGE,
+				"Attributes updated.",
+				simulate
+						? "Attribute updates were simulated."
+						: "Attribute updates were committed.");
+		Dna.logger.log(l);
+	}
+
+	/**
+	 * Set entities and attributes for a variable with statement type name and variable name.
+	 * 
+	 * <p>The supplied {@link DataFrame} must contain {@code m + 3} columns:
+ 	 * <ul>
+ 	 *   <li>column 0: entity ID (int)</li>
+ 	 *   <li>column 1: entity value (String)</li>
+ 	 *   <li>column 2: entity color (hex RGB String, e.g. {@code "#AABBCC"})</li>
+ 	 *   <li>columns 3..m+2: attribute variable values (String)</li>
+ 	 * </ul>
+ 	 *
+ 	 * @param statementType The name of the statement type in which the variable is defined.
+     * @param variable The name of the variable whose entities and attributes should be updated.
+ 	 * @param df A {@link DataFrame} containing entity IDs, values, colors, and attribute values.
+ 	 * @param simulate If {@code true}, all changes are rolled back after execution. If {@code false}, changes are committed to the database.
+	 */
+	public void setAttributes(String statementType, String variable, DataFrame df, boolean simulate) {
+		sql.DataExchange.setAttributes(statementType, variable, df, simulate);
+
+		LogEvent l = new LogEvent(
+				Logger.MESSAGE,
+				"Attributes updated.",
+				simulate
+						? "Attribute updates were simulated."
+						: "Attribute updates were committed.");
+		Dna.logger.log(l);
+	}
+
+
+	/* =================================================================================================================
+	 * Functions for managing statements
+	 * =================================================================================================================
+	 */
 
 	/**
 	 * Retrieve statements for a given statement type ID, possibly filtered by statement IDs.

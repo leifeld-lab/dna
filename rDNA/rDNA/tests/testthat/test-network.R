@@ -11,7 +11,6 @@ cleanup <- function() {
 }
 
 test_that("dna_network, as.matrix, print, autoplot, and dna_tidygraph work", {
-  testthat::skip_on_ci()
   preparation()
 
   nw <- dna_network(networkType = "twomode")
@@ -47,7 +46,6 @@ test_that("dna_network, as.matrix, print, autoplot, and dna_tidygraph work", {
 })
 
 test_that("dna_tidygraph works", {
-  testthat::skip_on_ci()
   skip_if_not_installed("tidygraph", minimum_version = "1.3.1")
   preparation()
 

@@ -1,7 +1,7 @@
 context("data access")
 
 test_that("DNA can use databases and profiles", {
-  testthat::skip_on_ci()
+  dna_init()
   s <- dna_sample(overwrite = TRUE)
   expect_equal(dim(dna_queryCoders("sample.dna")), c(4, 3))
   expect_false(dna_openDatabase(db_url = s, coderId = 12, coderPassword = "sample"))
@@ -24,6 +24,7 @@ test_that("DNA can use databases and profiles", {
 })
 
 test_that("dna_sample works", {
+  dna_init()
   expect_equal(dna_sample(overwrite = TRUE), paste0(getwd(), "/sample.dna"))
   expect_true(file.exists(paste0(getwd(), "/sample.dna")))
   expect_gt(file.size(paste0(getwd(), "/sample.dna")), 200000)
@@ -31,26 +32,8 @@ test_that("dna_sample works", {
   unlink("sample.dna")
 })
 
-test_that("attribute management works", {
-  testthat::skip_on_ci()
-  samp <- dna_sample(overwrite = TRUE)
-  dna_openDatabase(samp, coderId = 1, coderPassword = "sample")
-  expect_error(dna_getAttributes(), "Please supply")
-  at <- dna_getAttributes(variableId = 2)
-  expect_s3_class(at, "dna_attributes")
-  expect_equal(nrow(at), 8)
-  expect_equal(ncol(at), 6)
-  expect_equal(colnames(at), c("ID", "value", "color", "Type", "Alias", "Notes"))
-  expect_equal(at[2, 2], "Alliance to Save Energy")
-  expect_equal(at[2, 3], "#00CC00")
-  expect_equal(at, dna_getAttributes(statementType = "DNA Statement", variable = "organization"))
-  expect_equal(at, dna_getAttributes(statementTypeId = 1, variable = "organization"))
-  dna_closeDatabase()
-  unlink("sample.dna")
-})
-
 test_that("statement management works", {
-  testthat::skip_on_ci()
+  dna_init()
   samp <- dna_sample(overwrite = TRUE)
   dna_openDatabase(samp, coderId = 1, coderPassword = "sample")
 
@@ -89,6 +72,90 @@ test_that("statement management works", {
   st_new <- dna_getStatements()
   expect_equal(st_new$agreement[st_new$ID == id], 1)
   expect_error(id <- dna_addStatement(documentID = doc_id, startCaret = 10, endCaret = 50, statementType = 1, coder = 2, organization = 25, concept = "some new concept", agreement = FALSE), "java.lang.ClassCastException")
+
+  dna_closeDatabase()
+  unlink("sample.dna")
+})
+
+test_that("attribute management works", {
+  dna_init()
+  samp <- dna_sample(overwrite = TRUE)
+  dna_openDatabase(samp, coderId = 1, coderPassword = "sample")
+
+  # dna_getAttributes
+  expect_error(dna_getAttributes(), "Please supply")
+  at <- dna_getAttributes(variableId = 2)
+  expect_s3_class(at, "dna_attributes")
+  expect_equal(nrow(at), 8)
+  expect_equal(ncol(at), 6)
+  expect_equal(colnames(at), c("ID", "value", "color", "Type", "Alias", "Notes"))
+  expect_equal(at[2, 2], "Alliance to Save Energy")
+  expect_equal(at[2, 3], "#00CC00")
+  expect_equal(at, dna_getAttributes(statementType = "DNA Statement", variable = "organization"))
+  expect_equal(at, dna_getAttributes(statementTypeId = 1, variable = "organization"))
+
+  # dna_setAttributes: error messages
+  expect_error(dna_setAttributes(), "argument \"data\" is missing")
+  expect_error(dna_setAttributes(15), "must be a data frame")
+  expect_error(dna_setAttributes(variableId = 2, at[, -1]), "first column of 'data' must be named 'ID'")
+
+  # dna_setAttributes: output
+  at[2, 2] <- "new value"
+  expect_output(dna_setAttributes(data = at, variableId = 2, simulate = TRUE), "Added                            0           -         0           -")
+  expect_output(dna_setAttributes(data = at, variableId = 2, simulate = TRUE), "Removed                          0           -         0           0")
+  expect_output(dna_setAttributes(data = at, variableId = 2, simulate = TRUE), "Value updates                    -           0         1           4")
+  expect_output(dna_setAttributes(data = at, variableId = 2, simulate = TRUE), "Color updates                    -           -         0           -")
+  expect_output(dna_setAttributes(data = at, variableId = 2, simulate = TRUE), "Num before                       3           -         8          40")
+  expect_output(dna_setAttributes(data = at, variableId = 2, simulate = TRUE), "Num after                        3           -         8          40")
+  expect_output(dna_setAttributes(data = at, variableId = 2, simulate = TRUE), "All changes were only simulated. The database remains unchanged.")
+
+  # dna_setAttributes: recode value
+  st_before <- dna_getStatements()
+  expect_output(dna_setAttributes(data = at, variableId = 2, simulate = FALSE), "All changes have been written into the database.")
+  st_after <- dna_getStatements()
+  expect_equal(dim(st_before), dim(st_after))
+  expect_equal(as.numeric(table(st_before == st_after)), c(4, 396)) # 4 statements updated as reported?
+
+  # dna_setAttributes: update attributes
+  at <- dna_getAttributes(variableId = 2)
+  at$color[6] <- "#FF00FF"
+  at$Alias[3] <- "Some alias"
+  expect_output(dna_setAttributes(data = at, variableId = 2, simulate = TRUE), "Value updates                    -           1         0           0")
+  expect_output(dna_setAttributes(data = at, variableId = 2, simulate = FALSE), "Color updates                    -           -         1           -")
+  at <- dna_getAttributes(variableId = 2)
+  expect_equal(at$color[6], "#FF00FF")
+  expect_equal(at$Alias[3], "Some alias")
+
+  # dna_setAttributes: add a new entity
+  at[9, ] <- at[4, ]
+  at$ID[9] <- -1
+  at$value[9] <- "another new value"
+  expect_output(dna_setAttributes(data = at, variableId = 2, simulate = TRUE), "Added                            0           -         1           -")
+  expect_output(dna_setAttributes(data = at, variableId = 2, simulate = TRUE), "Num before                       3           -         8          40")
+  expect_output(dna_setAttributes(data = at, variableId = 2, simulate = TRUE), "Num after                        3           -         9          40")
+  expect_no_error(dna_setAttributes(data = at, variableId = 2, simulate = FALSE)) # write new entity into the database
+  at <- dna_getAttributes(variableId = 2)
+  expect_equal(at$Type[at$value == "another new value"], "Business") # "Business" was copied from row 4
+
+  # dna_setAttributes: remove an entity including statements
+  at <- at[-2, ]
+  expect_output(dna_setAttributes(data = at, variableId = 2, simulate = TRUE), "Removed                          0           -         1           4")
+  expect_output(dna_setAttributes(data = at, variableId = 2, simulate = TRUE), "Num before                       3           -         9          40")
+  expect_output(dna_setAttributes(data = at, variableId = 2, simulate = TRUE), "Num after                        3           -         8          36")
+  dna_setAttributes(data = at, variableId = 2, simulate = FALSE)
+  expect_equal(dim(dna_getAttributes(variableId = 2)), c(8, 6)) # instead of previously c(9, 6)
+  expect_equal(dim(dna_getStatements(statementType = 1)), c(36, 10)) # instead of previously c(40, 10)
+
+  # dna_setAttributes: add a new attribute variable
+  at$newVar <- letters[1:8] # add new attribute variable
+  at <- at[, c(1:5, 7, 6)] # swap position of variables to make the challenge harder
+  expect_output(dna_setAttributes(data = at, variableId = 2, simulate = TRUE), "Added                            1           -         0           -")
+  expect_output(dna_setAttributes(data = at, variableId = 2, simulate = TRUE), "Value updates                    -           8         0           0")
+  expect_output(dna_setAttributes(data = at, variableId = 2, simulate = TRUE), "Num before                       3           -         8          36")
+  expect_output(dna_setAttributes(data = at, variableId = 2, simulate = TRUE), "Num after                        4           -         8          36")
+  dna_setAttributes(data = at, variableId = 2, simulate = FALSE)
+  expect_equal(dim(dna_getAttributes(variableId = 2)), c(8, 7))
+  expect_equal(colnames(dna_getAttributes(variableId = 2)), c("ID", "value", "color", "Type", "Alias", "Notes", "newVar"))
 
   dna_closeDatabase()
   unlink("sample.dna")

@@ -141,6 +141,17 @@ public class DataFrame {
     }
 
     /**
+     * Sets a value in the DataFrame.
+     *
+     * @param row Row index
+     * @param col Column index
+     * @param value New value
+     */
+    public void setValue(int row, int col, Object value) {
+        data.get(row).set(col, value);
+    }
+
+    /**
      * Returns the full data table as a list of rows.
      *
      * @return List of rows.
@@ -403,5 +414,36 @@ public class DataFrame {
         }
 
         return array;
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("DataFrame with ").append(nrow()).append(" rows and ").append(ncol()).append(" columns:\n");
+        for (int j = 0; j < ncol(); j++) {
+            if (this.getVariableName(j).equals("ID")) {
+                sb.append(String.format("%3s", this.getVariableName(j))).append("  ");
+            } else if (this.getVariableName(j).equals("color")) {
+                sb.append(String.format("%7s", this.getVariableName(j))).append("  ");
+            } else {
+                sb.append(String.format("%-12s", this.getVariableName(j))).append("  ");
+            }
+            sb.append("\n");
+            for (int i = 0; i < Math.min(nrow(), 10); i++) { // show up to first 10 rows
+                Object value = this.getValue(i, j);
+                if (this.getVariableName(j).equals("ID")) {
+                    sb.append(String.format("%3s", String.valueOf(value))).append("  ");
+                } else if (this.getVariableName(j).equals("color")) {
+                    sb.append(String.format("%7s", String.valueOf(value))).append("  ");
+                } else {
+                    sb.append(String.format("%-12.12s", String.valueOf(value))).append("  ");
+                }
+            }
+            sb.append("\n");
+        }
+        if (nrow() > 10) {
+            sb.append("... (").append(nrow() - 10).append(" more rows)\n");
+        }
+        return sb.toString();
     }
 }

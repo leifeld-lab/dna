@@ -57,6 +57,10 @@ dna_getAttributes(statementType = "DNA Statement", variable = "concept")
 }
 
 }
+\seealso{
+Other attributes: 
+\code{\link{dna_setAttributes}()}
+}
 \author{
 Philip Leifeld
 }

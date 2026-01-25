@@ -785,6 +785,166 @@ dna_getAttributes <- function(statementType = NULL,
   return(dat)
 }
 
+#' Set entities and attributes for a variable
+#'
+#' Update entities (values, colors, and attribute values for a variable in DNA
+#' by supplying a data frame. The data frame must contain the same structure as
+#' returned by \code{\link{dna_getAttributes}}.
+#'
+#' The first three columns must be:
+#' \enumerate{
+#'   \item \code{ID} – integer entity ID
+#'   \item \code{value} – character entity value
+#'   \item \code{color} – character hex RGB color (e.g. \code{"#AABBCC"})
+#' }
+#' All remaining columns are interpreted as attribute variables.
+#'
+#' Identify which variable to update by supplying one of the following:
+#' \enumerate{
+#'   \item the variable ID
+#'   \item the variable name as a character object and the statement type ID
+#'   \item the variable name and statement type as character objects
+#' }
+#'
+#' @param data A data frame of class \code{dna_attributes} or compatible
+#'   \code{data.frame}.
+#' @param statementType The name of the statement type in which the variable is
+#'   defined. Only required if \code{variableId} and \code{statementTypeId} are
+#'   not supplied.
+#' @param statementTypeId The ID of the statement type in which the variable is
+#'   defined. Only required if \code{variableId} and \code{statementType} are
+#'   not supplied.
+#' @param variable The name of the variable whose entities and attributes should
+#'   be updated. Required unless \code{variableId} is supplied.
+#' @param variableId The ID of the variable whose entities and attributes should
+#'   be updated. Required unless \code{variable} and either \code{statementType}
+#'   or \code{statementTypeId} is supplied.
+#' @param simulate Logical; if \code{TRUE}, all changes are rolled back after
+#'   execution. Use this as a precaution to test how changes would affect the
+#'   database before repeating the function without simulation.
+#'
+#' @author Philip Leifeld
+#'
+#' @family attributes
+#'
+#' @importFrom rJava .jcall .jnew
+#' @export
+dna_setAttributes <- function(data,
+                              statementType = NULL,
+                              variable = NULL,
+                              statementTypeId = NULL,
+                              variableId = NULL,
+                              simulate = TRUE) {
+
+  # basic checks
+  if (!is.data.frame(data)) {
+    stop("'data' must be a data frame.")
+  }
+
+  if (ncol(data) < 3) {
+    stop("'data' must contain at least three columns: ID, value, and color.")
+  }
+
+  if (colnames(data)[1] != "ID") {
+    stop("The first column of 'data' must be named 'ID'.")
+  }
+
+  if (colnames(data)[2] != "value") {
+    stop("The second column of 'data' must be named 'value'.")
+  }
+
+  if (colnames(data)[3] != "color") {
+    stop("The third column of 'data' must be named 'color'.")
+  }
+
+  if (!is.logical(simulate) || length(simulate) != 1 || is.na(simulate)) {
+    stop("'simulate' must be a single logical value.")
+  }
+
+  # argument validity
+  statementTypeValid <- is.character(statementType) && length(statementType) == 1 && !is.na(statementType) && statementType != ""
+  statementTypeIdValid <- is.numeric(statementTypeId) && length(statementTypeId) == 1 && !is.na(statementTypeId) && statementTypeId %% 1 == 0
+  variableValid <- is.character(variable) && length(variable) == 1 && !is.na(variable) && variable != ""
+  variableIdValid <- is.numeric(variableId) && length(variableId) == 1 && !is.na(variableId) && variableId %% 1 == 0
+
+  if ((!variableIdValid && !variableValid) || (!variableIdValid && !statementTypeValid && !statementTypeIdValid)) {
+    stop("Please supply either: 1) a variable ID, or 2) a statement type name and variable name, or 3) a statement type ID and variable name.")
+  }
+
+  if (variableIdValid && variableValid) {
+    warning("Both 'variableId' and 'variable' supplied. Ignoring 'variable'.")
+    variable <- NULL
+    variableValid <- FALSE
+  }
+
+  if (statementTypeValid && statementTypeIdValid && !variableIdValid) {
+    warning("Both 'statementType' and 'statementTypeId' supplied. Ignoring 'statementType'.")
+    statementType <- NULL
+    statementTypeValid <- FALSE
+  }
+
+  if (variableIdValid) {
+    statementType <- NULL
+    statementTypeId <- NULL
+  }
+
+  # create Java DataFrame
+  df <- .jnew("dna/export/DataFrame")
+  for (j in 1:ncol(data)) {
+    varName <- colnames(data)[j]
+    if (is.character(data[, j]) || is.factor(data[, j])) {
+      #l <- lapply(data[, j], function(x) .jcast(.jnew("java/lang/String", as.character(x)), new.class = "java/lang/Object")) # cast each character object to String, then Object, and save them in a list
+      l <- lapply(data[[j]], function(x) .jnew("java/lang/String", as.character(x))) # create Java Strings and save in R list
+      dataType <- "String"
+    } else if (is.numeric(data[, j])) {
+      #l <- lapply(data[, j], function(x) .jcast(.jnew("java/lang/Integer", as.integer(x)), new.class = "java/lang/Object")) # cast each character object to Integer, then Object, and save them in a list
+      l <- lapply(data[[j]], function(x) .jnew("java/lang/Integer", as.integer(x))) # create Java Integers and save in R list
+      dataType <- "Integer"
+    }
+    al <- .jnew("java/util/ArrayList") # create array list (generic type is inferred when it's populated)
+    for (i in 1:length(l)) {
+      al$add(l[[i]]) # add elements to array list
+    }
+    df$addColumn(varName, dataType, al)
+    #.jcall(df, "V", "addColumn", varName, dataType, al) # add the array list as a column to the Java DataFrame
+  }
+
+  # call Java API
+  if (variableIdValid) {
+    dna_api()$setAttributes(as.integer(variableId), df, simulate)
+    #.jcall(
+    #  dna_api(),
+    #  "V",
+    #  "setAttributes",
+    #  as.integer(variableId),
+    #  df,
+    #  simulate
+    #)
+  } else if (statementTypeIdValid) {
+    dna_api()$setAttributes(as.integer(statementTypeId), variable, df, simulate)
+    #.jcall(
+    #  dna_api(),
+    #  "V",
+    #  "setAttributes",
+    #  as.integer(statementTypeId),
+    #  variable,
+    #  df,
+    #  simulate
+    #)
+  } else {
+    dna_api()$setAttributes(statementType, variable, df, simulate)
+    #.jcall(
+    #  dna_api(),
+    #  "V",
+    #  "setAttributes",
+    #  statementType,
+    #  variable,
+    #  df,
+    #  simulate
+    #)
+  }
+}
+
 # Statements -------------------------------------------------------------------
 
 #' Retrieve statements for a given statement type

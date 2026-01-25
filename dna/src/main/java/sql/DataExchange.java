@@ -18,8 +18,14 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Objects;
 
 public class DataExchange {
+
+	/* =================================================================================================================
+	 * Functions for managing attributes
+	 * =================================================================================================================
+	 */
 
     /**
      * Get a data frame of entities (with ID, value, and color) and their attribute values.
@@ -171,6 +177,7 @@ public class DataExchange {
      *   database.
      */
     static public void setAttributes(int variableId, DataFrame df, boolean simulate) {
+        String s = "";
         try (ProgressBar pb = new ProgressBar("Setting attributes...", 15)) {
             pb.stepTo(1);
             pb.setExtraMessage("Setting up parameters...");
@@ -190,6 +197,13 @@ public class DataExchange {
                  PreparedStatement s13 = conn.prepareStatement("SELECT COUNT(ID) FROM DATASHORTTEXT WHERE Entity = ?;");
                  PreparedStatement s14 = conn.prepareStatement("SELECT COUNT(ID) FROM ENTITIES WHERE VariableId = ?;");
                  PreparedStatement s15 = conn.prepareStatement("SELECT COUNT(ID) FROM STATEMENTS WHERE StatementTypeId = (SELECT StatementTypeId FROM VARIABLES WHERE ID = ?);");
+                 PreparedStatement s16 = conn.prepareStatement("INSERT INTO ATTRIBUTEVALUES (EntityId, AttributeVariableId, AttributeValue) SELECT ?, ?, ? WHERE NOT EXISTS (SELECT 1 FROM ATTRIBUTEVALUES WHERE EntityId = ? AND AttributeVariableId = ?);");
+                 PreparedStatement s17 = conn.prepareStatement("SELECT StatementTypeId FROM VARIABLES WHERE ID = ?");
+                 PreparedStatement s18 = conn.prepareStatement("SELECT COUNT(*) FROM VARIABLES WHERE StatementTypeId = ? AND DataType = 'short text'");
+                 PreparedStatement s19 = conn.prepareStatement("SELECT StatementId, COUNT(*) FROM DATASHORTTEXT GROUP BY StatementId");
+                 PreparedStatement s20 = conn.prepareStatement("DELETE FROM STATEMENTS WHERE ID = ?");
+                 PreparedStatement s21 = conn.prepareStatement("SELECT ID FROM STATEMENTS WHERE StatementTypeId = ?");
+
                  Sql.SQLCloseable finish = conn::rollback) {
                 conn.setAutoCommit(false);
 
@@ -212,7 +226,7 @@ public class DataExchange {
 
                 // count how many statements are in this variable type after the changes (for record keeping)
                 pb.stepTo(2);
-                pb.setExtraMessage("Counting initial statements...");
+                pb.setExtraMessage("Count statem.");
                 s15.setInt(1, variableId);
                 ResultSet r1 = s15.executeQuery();
                 while (r1.next()) {
@@ -221,7 +235,7 @@ public class DataExchange {
 
                 // retrieve existing entity IDs to be able to add a new attribute variable for them if necessary and check if an entity already exists before considering to add it
                 pb.stepTo(3);
-                pb.setExtraMessage("Loading entities...");
+                pb.setExtraMessage("Load entities");
                 ArrayList<Integer> entityIds = new ArrayList<Integer>();
                 s2.setInt(1, variableId);
                 r1 = s2.executeQuery();
@@ -232,7 +246,7 @@ public class DataExchange {
 
                 // remove attribute variables from database that were removed from the data frame
                 pb.stepTo(4);
-                pb.setExtraMessage("Removing attribute variables...");
+                pb.setExtraMessage("Remove attr var");
                 ArrayList<String> dfVarNames = df.getVariableNames();
                 s1.setInt(1,  variableId);
                 r1 = s1.executeQuery();
@@ -242,7 +256,7 @@ public class DataExchange {
                 }
                 previousStateAttributeVariables = attributeVariableNames.size(); // record keeping
                 for (int i = 0; i < attributeVariableNames.size(); i++) {
-                    if (!dfVarNames.contains((String) attributeVariableNames.get(i))) {
+                    if (!dfVarNames.subList(3, dfVarNames.size()).contains((String) attributeVariableNames.get(i))) {
                         s3.setInt(1, variableId);
                         s3.setString(2, (String) attributeVariableNames.get(i));
                         s3.executeUpdate();
@@ -252,9 +266,9 @@ public class DataExchange {
 
                 // add attribute variables to database if they were added to the data frame
                 pb.stepTo(5);
-                pb.setExtraMessage("Adding attribute variables...");
+                pb.setExtraMessage("Add attr. vars.");
                 ResultSet generatedKeysResultSet;
-                for (int i = 0; i < dfVarNames.size(); i++) {
+                for (int i = 3; i < dfVarNames.size(); i++) {
                     if (!attributeVariableNames.contains(dfVarNames.get(i))) {
                         // add to ATTRIBUTEVARIABLES and get its new ID
                         s4.setInt(1, variableId);
@@ -280,7 +294,7 @@ public class DataExchange {
 
                 // get current attribute variables for the given variable ID from the database
                 pb.stepTo(6);
-                pb.setExtraMessage("Reloading attribute variables...");
+                pb.setExtraMessage("Reload attr var");
                 ArrayList<Integer> attributeVariableIds = new ArrayList<Integer>();
                 attributeVariableNames.clear();
                 s1.setInt(1, variableId);
@@ -292,7 +306,7 @@ public class DataExchange {
 
                 // read entity IDs and values from database; necessary for aggregating duplicate rows below
                 pb.stepTo(7);
-                pb.setExtraMessage("Reloading entities...");
+                pb.setExtraMessage("Reload entities");
                 HashMap<Integer, String> entityValues = new HashMap<Integer, String>();
                 s2.setInt(1, variableId);
                 r1 = s2.executeQuery();
@@ -302,7 +316,7 @@ public class DataExchange {
 
                 // aggregate/unite duplicate entity values in df into a single entity ID in the database, and adjust df accordingly
                 pb.stepTo(8);
-                pb.setExtraMessage("Unifying duplicate entities...");
+                pb.setExtraMessage("Unify dupl ent.");
                 ArrayList<Entity> duplicates = new ArrayList<Entity>();
                 HashMap<String, String> av = new HashMap<String, String>();
                 Entity e;
@@ -313,12 +327,14 @@ public class DataExchange {
                     if (!completed.contains(i)) {
                         // add Entity i to array list
                         duplicates.clear();
+                        rowIndicesOfDuplicates.clear();
                         av.clear();
-                        for (int k = 4; k <df.ncol(); k++) {
+                        for (int k = 3; k < df.ncol(); k++) {
                             av.put(df.getVariableName(k), (String) df.getValue(i, k));
                         }
                         Color color = new Color((String) df.getValue(i, 2));
-                        e = new Entity((int) df.getValue(i, 0), variableId, (String) df.getValue(i, 1), color, -1, entityValues.containsKey((int) df.getValue(i, 0)), av);
+                        int entityId = (Integer) df.getValue(i, 0);
+                        e = new Entity(entityId, variableId, (String) df.getValue(i, 1), color, -1, entityValues.containsKey((int) df.getValue(i, 0)), av);
                         duplicates.add(e);
                         rowIndicesOfDuplicates.add(i);
                         completed.add(i);
@@ -327,11 +343,12 @@ public class DataExchange {
                         for (int j = 0; j < df.nrow(); j++) {
                             if (i != j && !completed.contains(j) && ((String) df.getValue(j, 1)).equals((String) df.getValue(i, 1))) { // check if duplicate value
                                 av.clear();
-                                for (int k = 4; k <df.ncol(); k++) {
+                                for (int k = 3; k < df.ncol(); k++) {
                                     av.put(df.getVariableName(k), (String) df.getValue(j, k));
                                 }
                                 color = new Color((String) df.getValue(j, 2));
-                                e = new Entity((int) df.getValue(j, 0), variableId, (String) df.getValue(j, 1), color, -1, entityValues.containsKey((int) df.getValue(i, 0)), av);
+                                entityId = (Integer) df.getValue(j, 0);
+                                e = new Entity(entityId, variableId, (String) df.getValue(j, 1), color, -1, entityValues.containsKey((int) df.getValue(j, 0)), av);
                                 duplicates.add(e);
                                 rowIndicesOfDuplicates.add(j);
                                 completed.add(j);
@@ -348,7 +365,7 @@ public class DataExchange {
                                 targetId = duplicates.get(j).getId();
                                 targetColor = !duplicates.get(j).getColor().equals(new Color(0, 0, 0));
                                 targetAttributes = 0;
-                                for (int k = 4; k < df.ncol(); k++) {
+                                for (int k = 3; k < df.ncol(); k++) {
                                     if (!duplicates.get(j).getAttributeValues().get(df.getVariableName(k)).equals("")) {
                                         targetAttributes++;
                                     }
@@ -357,7 +374,7 @@ public class DataExchange {
                             } else { // if not the first duplicate, compare with the previous target based on database presence, attribute values, and color
                                 boolean candidateColor = !duplicates.get(j).getColor().equals(new Color(0, 0, 0));
                                 int candidateAttributes = 0;
-                                for (int k = 4; k < df.ncol(); k++) {
+                                for (int k = 3; k < df.ncol(); k++) {
                                     if (!duplicates.get(j).getAttributeValues().get(df.getVariableName(k)).equals("")) {
                                         candidateAttributes++;
                                     }
@@ -400,6 +417,7 @@ public class DataExchange {
                                     s7.setInt(1, generatedEntityId);
                                     s7.setInt(2, attributeVariableIds.get(j));
                                     s7.setString(3, targetEntity.getAttributeValues().get(attributeVariableNames.get(j)));
+                                    s7.executeUpdate();
                                 }
                                 counterAddedEntities++; // record keeping
                             }
@@ -437,35 +455,29 @@ public class DataExchange {
 
                 // refresh entity IDs from database in memory
                 pb.stepTo(9);
-                pb.setExtraMessage("Reloading entities...");
+                pb.setExtraMessage("Reload entities");
                 entityIds.clear();
-                r1 = s2.executeQuery();
-                while (r1.next()) {
-                    entityIds.add(r1.getInt("EntityId"));
-                }
-
-                // create hash map of entities (with attribute values) in database to facilitate comparison for updating entities further below (needed here already to check if an entity value is empty (""))
-                HashMap<Integer, Entity> entityMap = new HashMap<Integer, Entity>();
+                entityValues.clear();
                 s2.setInt(1, variableId);
                 r1 = s2.executeQuery();
                 while (r1.next()) {
-                    entityMap.put(r1.getInt("EntityId"), new Entity(r1.getInt("EntityId"), variableId, r1.getString("Value"), new Color(r1.getInt("Red"), r1.getInt("Green"), r1.getInt("Blue"))));
+                    int eid = r1.getInt("EntityId");
+                    entityIds.add(eid);
+                    entityValues.put(eid, r1.getString("Value"));
                 }
-                s12.setInt(1, variableId);
-                r1 = s12.executeQuery();
-                while (r1.next()) {
-                    entityMap.get(r1.getInt("EntityId")).getAttributeValues().put(r1.getString("AttributeVariable"), r1.getString("AttributeValue"));
-                }
-
+                
                 // remove entities from database that were removed from data frame
                 pb.stepTo(10);
-                pb.setExtraMessage("Removing entities...");
+                pb.setExtraMessage("Remove entities");
                 ArrayList<Integer> dfEntityIds = new ArrayList<Integer>();
                 for (int i = 0; i < df.nrow(); i++) {
-                    dfEntityIds.add((int) df.getValue(i, 0));
+                    int entityId = (Integer) df.getValue(i, 0);
+                    dfEntityIds.add(entityId);
                 }
                 for (int i = 0; i < entityIds.size(); i++) {
-                    if (!dfEntityIds.contains(entityIds.get(i)) && !entityMap.get(entityIds.get(i)).getValue().equals("")) { // check to make sure that entity ID is present in data frame but not in database and has a non-empty ("") value
+                    int eid = entityIds.get(i);
+                    String val = entityValues.get(eid);
+                    if (!dfEntityIds.contains(entityIds.get(i)) && val != null && !val.equals("")) { // check to make sure that entity ID is present in data frame but not in database and has a non-empty ("") value
                         s5.setInt(1, entityIds.get(i));
                         s5.executeUpdate();
                         counterRemovedEntities++; // record keeping
@@ -474,13 +486,15 @@ public class DataExchange {
 
                 // add entities to database if they were added to the data frame
                 pb.stepTo(11);
-                pb.setExtraMessage("Adding entities...");
+                pb.setExtraMessage("Add entities");
+                HashMap<Integer, Integer> tempIdToGeneratedId = new HashMap<>();
                 String entityValue;
                 Color color;
                 for (int i = 0; i < df.nrow(); i++) {
                     // check if the entity ID exists in ENTITIES and proceed if not (e.g., if -1)
                     // no need to check whether value already exists because duplicates have already been aggregated
                     if (!entityIds.contains((int) df.getValue(i, 0))) {
+                        int tempId = (int) df.getValue(i, 0); // e.g., -1
                         // add into ENTITIES
                         s9.setInt(1, variableId);
                         s9.setString(2, (String) df.getValue(i, 1));
@@ -493,26 +507,102 @@ public class DataExchange {
                         while (generatedKeysResultSet.next()) {
                             // add entries for each attribute variable to ATTRIBUTEVALUES
                             int generatedEntityId = generatedKeysResultSet.getInt(1);
+                            tempIdToGeneratedId.put(tempId, generatedEntityId); // keep a record of temp ID to generated ID mapping
                             for (int j = 0; j < attributeVariableIds.size(); j++) {
                                 s7.setInt(1, generatedEntityId);
                                 s7.setInt(2, attributeVariableIds.get(j));
                                 s7.setString(3, (String) df.getValue(i, attributeVariableNames.get(j)));
+                                s7.executeUpdate();
                             }
                             counterAddedEntities++; // record keeping
                         }
                     }
                 }
 
+                if (!simulate) {
+                    for (int i = 0; i < df.nrow(); i++) {
+                        int id = (int) df.getValue(i, 0);
+                        if (tempIdToGeneratedId.containsKey(id)) {
+                            df.setValue(i, 0, tempIdToGeneratedId.get(id));
+                        }
+                    }
+                }
+
+
+                // refresh entity IDs and values from database in memory (no entityMap yet)
+                entityIds.clear();
+                entityValues.clear();
+                s2.setInt(1, variableId);
+                r1 = s2.executeQuery();
+                while (r1.next()) {
+                    int eid = r1.getInt("EntityId");
+                    entityIds.add(eid);
+                    entityValues.put(eid, r1.getString("Value"));
+                }
+
+                // ensure ATTRIBUTEVALUES completeness after adding entities
+                for (int eid : entityIds) {
+                    for (int k = 0; k < attributeVariableIds.size(); k++) {
+                        int avid = attributeVariableIds.get(k);
+                        s16.setInt(1, eid);
+                        s16.setInt(2, avid);
+                        s16.setString(3, "");
+                        s16.setInt(4, eid);
+                        s16.setInt(5, avid);
+                        s16.executeUpdate();
+                    }
+                }
+
+                // build authoritative entity snapshot (used in step 12)
+                HashMap<Integer, Entity> entityMap = new HashMap<>();
+                s2.setInt(1, variableId);
+                r1 = s2.executeQuery();
+                while (r1.next()) {
+                    int eid = r1.getInt("EntityId");
+                    entityMap.put(
+                        eid,
+                        new Entity(
+                            eid,
+                            variableId,
+                            r1.getString("Value"),
+                            new Color(
+                                r1.getInt("Red"),
+                                r1.getInt("Green"),
+                                r1.getInt("Blue")
+                            )
+                        )
+                    );
+                }
+
+                s12.setInt(1, variableId);
+                r1 = s12.executeQuery();
+                while (r1.next()) {
+                    Entity ent = entityMap.get(r1.getInt("EntityId"));
+                    if (ent != null) {
+                        ent.getAttributeValues().put(
+                            r1.getString("AttributeVariable"),
+                            r1.getString("AttributeValue")
+                        );
+                    }
+                }
+
                 // update entities and attribute values
                 pb.stepTo(12);
-                pb.setExtraMessage("Updating attribute values...");
+                pb.setExtraMessage("Update values");
                 int entityId;
                 Color entityColor;
                 for (int i = 0; i < df.nrow(); i++) {
                     // update ENTITIES table if necessary
                     entityId = (int) df.getValue(i, 0);
+                    if (!entityMap.containsKey(entityId)) {
+                        continue;
+                    }
                     entityValue = (String) df.getValue(i, 1);
                     entityColor = new Color((String) df.getValue(i, 2));
+                    Entity existing = entityMap.get(entityId);
+                    if (existing == null) {
+                        continue; // entity was newly added or not yet in DB
+                    }
                     if (!entityValue.equals(entityMap.get(entityId).getValue())
                             || entityMap.get(entityId).getColor().getRed() != entityColor.getRed()
                             || entityMap.get(entityId).getColor().getGreen() != entityColor.getGreen()
@@ -535,8 +625,12 @@ public class DataExchange {
                         }
                     }
                     // update ATTRIBUTEVALUES table if necessary
-                    for (int j = 4; j < df.ncol(); j++) {
-                        if (!entityMap.get(entityId).getAttributeValues().get(df.getVariableName(j)).equals((String) df.getValue(i, j))) {
+                    for (int j = 3; j < df.ncol(); j++) {
+                        if (!entityMap.containsKey(entityId)) continue; // just a safety check; probably not necessary
+                        if (!Objects.equals(
+                            entityMap.get(entityId).getAttributeValues().get(df.getVariableName(j)),
+                            (String) df.getValue(i, j)
+                        )) {
                             s11.setString(1, (String) df.getValue(i, j));
                             s11.setInt(2, entityId);
                             s11.setInt(3, variableId);
@@ -549,54 +643,171 @@ public class DataExchange {
 
                 // check how many entities are in this variable type after the changes (for record keeping)
                 pb.stepTo(13);
-                pb.setExtraMessage("Counting entities...");
+                pb.setExtraMessage("Count entities");
                 s14.setInt(1, variableId);
                 r1 = s14.executeQuery();
                 while (r1.next()) {
                     currentStateEntities = r1.getInt(1); // record keeping
                 }
 
-                // count how many statements are in this variable type after the changes (for record keeping)
+                // remove orphan statements (statements without DATASHORTTEXT rows) and count how many statements are in this variable type after the changes (for record keeping)
                 pb.stepTo(14);
-                pb.setExtraMessage("Counting statements...");
-                r1 = s15.executeQuery();
-                while (r1.next()) {
-                    currentStateStatements = r1.getInt(1); // record keeping
+                pb.setExtraMessage("Remove statem.");
+                int deletedStatements = 0;
+                s17.setInt(1, variableId);
+                r1 = s17.executeQuery();
+                int statementTypeId = -1;
+                if (r1.next()) {
+                   statementTypeId = r1.getInt(1);
+                }
+                if (statementTypeId != -1) {
+                    // how many short-text variables are required?
+                    s18.setInt(1, statementTypeId);
+                    r1 = s18.executeQuery();
+                    int requiredVars = 0;
+                    if (r1.next()) {
+                        requiredVars = r1.getInt(1);
+                    }
+                    // count DATASHORTTEXT rows per statement
+                    HashMap<Integer, Integer> presentCounts = new HashMap<>();
+                    r1 = s19.executeQuery();
+                    while (r1.next()) {
+                        presentCounts.put(r1.getInt(1), r1.getInt(2));
+                    }
+                    // iterate statements of this type
+                    s21.setInt(1, statementTypeId);
+                    r1 = s21.executeQuery();
+                    while (r1.next()) {
+                        int sid = r1.getInt(1);
+                        int present = presentCounts.getOrDefault(sid, 0);
+                        if (present < requiredVars) {
+                            s20.setInt(1, sid);
+                            s20.executeUpdate();
+                            deletedStatements++;
+                        }
+                    }
+                    currentStateStatements = previousStateStatements - deletedStatements; // record keeping
                 }
 
                 // commit the changes to the database or roll back if simulation
                 pb.stepTo(15);
                 if (simulate) {
-                    pb.setExtraMessage("Rolling simulated changes back...");
+                    pb.setExtraMessage("Rolling back");
                     conn.rollback();
                 } else {
-                    pb.setExtraMessage("Committing simulated changes...");
+                    pb.setExtraMessage("Committing");
                     conn.commit();
                 }
 
                 // print console report
-                String s = "Recorded changes in entities and attributes:\n\n" +
-                        "               Attribute variables  Attributes  Entities  Statements" +
+                s = "\nRecorded changes in entities and attributes:\n" +
+                        "               Attribute variables  Attributes  Entities  Statements\n" +
                         "Added         " + String.format("%20d", counterAddedAttributeVariables) + "           - " + String.format("%9d", counterAddedEntities) + "           -\n" +
-                        "Removed       " + String.format("%20d", counterRemovedAttributeVariables) + "           - " + String.format("%9d", counterRemovedEntities) + " " + String.format("%11d", currentStateStatements - previousStateStatements) + "\n" +
-                        "Value updates                    - " + String.format("%11d", counterUpdatedAttributeValues) + String.format("%9d", counterRenamedEntities) + " " + String.format("%11d", counterStatementsRenamed) + "\n" +
+                        "Removed       " + String.format("%20d", counterRemovedAttributeVariables) + "           - " + String.format("%9d", counterRemovedEntities) + " " + String.format("%11d", deletedStatements) + "\n" +
+                        "Value updates                    - " + String.format("%11d", counterUpdatedAttributeValues) + " " + String.format("%9d", counterRenamedEntities) + " " + String.format("%11d", counterStatementsRenamed) + "\n" +
                         "Color updates                    -           - " + String.format("%9d", counterUpdatedColors) + "           -\n" +
                         "Num before    " + String.format("%20d", previousStateAttributeVariables) + "           - " + String.format("%9d", previousStateEntities) + " " + String.format("%11d", previousStateStatements) + "\n" +
-                        "Num after     " + String.format("%20d", currentStateAttributeVariables) + "           - " + String.format("%9d", currentStateEntities) + " " + String.format("%11d", currentStateStatements) + "\n\n";
+                        "Num after     " + String.format("%20d", currentStateAttributeVariables) + "           - " + String.format("%9d", currentStateEntities) + " " + String.format("%11d", currentStateStatements) + "\n";
                 if (simulate) {
                     s = s + "All changes were only simulated. The database remains unchanged.";
                 } else {
                     s = s + "All changes have been written into the database.";
                 }
-                System.out.println(s);
             } catch (SQLException e) {
                 LogEvent l = new LogEvent(Logger.ERROR,
                         "Setting entities and attributes failed.",
-                        "Tried to set attributes by supplying a data frame with entities and attribute values, but failed. No changes were made to the database. See the error stack for details.");
+                        "Tried to set attributes by supplying a data frame with entities and attribute values, but failed. No changes were made to the database. See the error stack for details.",
+                        e);
                 Dna.logger.log(l);
+                e.printStackTrace(); // show real SQL error in console
+                throw new RuntimeException("setAttributes failed (see stack trace above)", e);
             }
         }
+        System.out.println(s);
     }
+
+    /**
+     * Set entities and attributes for a variable identified by statement type ID and variable name.
+     *
+     * @param statementTypeId The ID of the statement type in which the variable is defined.
+     * @param variable        The name of the variable.
+     * @param df              A DataFrame containing entity IDs, values, colors, and attribute values.
+     * @param simulate        If true, changes are rolled back; otherwise they are committed.
+     */
+    static public void setAttributes(
+            int statementTypeId,
+            String variable,
+            DataFrame df,
+            boolean simulate) {
+        int variableId = -1;
+
+        try (Connection conn = Dna.sql.getDataSource().getConnection();
+             PreparedStatement s = conn.prepareStatement("SELECT ID FROM VARIABLES WHERE Variable = ? AND StatementTypeId = ?;")) {
+
+            s.setString(1, variable);
+            s.setInt(2, statementTypeId);
+
+            ResultSet r = s.executeQuery();
+            while (r.next()) {
+                variableId = r.getInt(1);
+            }
+
+        } catch (SQLException ex) {
+            LogEvent l = new LogEvent(
+                    Logger.ERROR,
+                    "Could not retrieve variable ID.",
+                    "Failed to retrieve variable ID for variable \"" + variable + "\" (statement type ID: " + statementTypeId + ").",
+                    ex);
+            Dna.logger.log(l);
+            return;
+        }
+
+        setAttributes(variableId, df, simulate);
+    }
+
+    /**
+     * Set entities and attributes for a variable identified by statement type name and variable name.
+     *
+     * @param statementType The name of the statement type in which the variable is defined.
+     * @param variable      The name of the variable.
+     * @param df            A DataFrame containing entity IDs, values, colors, and attribute values.
+     * @param simulate      If true, changes are rolled back; otherwise they are committed.
+     */
+    static public void setAttributes(
+            String statementType,
+            String variable,
+            DataFrame df,
+            boolean simulate) {
+        int variableId = -1;
+
+        try (Connection conn = Dna.sql.getDataSource().getConnection();
+             PreparedStatement s = conn.prepareStatement("SELECT ID FROM VARIABLES WHERE Variable = ? AND StatementTypeId = (SELECT ID FROM STATEMENTTYPES WHERE Label = ?);")) {
+
+            s.setString(1, variable);
+            s.setString(2, statementType);
+
+            ResultSet r = s.executeQuery();
+            while (r.next()) {
+                variableId = r.getInt(1);
+            }
+
+        } catch (SQLException ex) {
+            LogEvent l = new LogEvent(
+                    Logger.ERROR,
+                    "Could not retrieve variable ID.",
+                    "Failed to retrieve variable ID for variable \"" + variable + "\" (statement type: \"" + statementType + "\").",
+                    ex);
+            Dna.logger.log(l);
+            return;
+        }
+
+        setAttributes(variableId, df, simulate);
+    }
+
+	/* =================================================================================================================
+	 * Functions for managing statements
+	 * =================================================================================================================
+	 */
 
     /**
      * Get a data frame with all statements of a specific type (based on the
@@ -769,472 +980,4 @@ public class DataExchange {
         int statementId = Dna.sql.addStatement(s);
         return statementId;
 	}
-
-    /**
-	 * Update the list of statements based on an array of arrays for the statement data.
-	 * 
-	 * @param statements  Array of objects containing statement IDs, statement type IDs, document IDs, start carets, stop carets, coder IDs, and further variables defined in the statement type.
-	 * @param verbose     Should statistics on updating process be reported?
-	 * @throws Exception
-	 */
-    /*
-	public void setStatements(Object[] statements, DataFrame data, boolean verbose) throws Exception {
-        
-		// find out which variables are in the table and what data types they have, based on the first entry
-        final StatementType statementType = Dna.sql.getStatementType((int) data.getValue(0, 2));
-        final ArrayList<Statement> statementsInDatabase = Dna.sql.getStatements(null, statementType.getId(), null, null, null, false, null, false, null, false, null, false);
-        final ArrayList<Integer> statementIDs = data.getVariable(0)
-            .stream()
-            .map(s -> (Integer) s)
-            .collect(Collectors.toCollection(ArrayList::new));
-
-        // 1. delete statements that are not in the data frame
-        int[] toDelete = statementsInDatabase
-            .stream()
-            .filter(s -> !statementIDs.contains(s.getId()))
-            .mapToInt(s -> s.getId())
-            .toArray();
-        if (toDelete.length > 0) {
-            if (verbose) {
-				System.out.print("Deleting " + toDelete.length + " statement(s)... ");
-			}
-            Dna.sql.deleteStatements(toDelete);
-			if (verbose == true) {
-				System.out.println("Done.");
-			}
-        }
-
-        // 2. move statements to different document IDs, caret positions, or coders
-        ArrayList<Statement> statementsToUpdate = new ArrayList<>();
-		for (int i = 0; i < data.nrow(); i++) {
-            for (int j = 0; j < statementsInDatabase.size(); j++) {
-                if (statementsInDatabase.get(j).getId() == (Integer) data.getValue(i, 0) && // identify statement by ID
-                        (statementsInDatabase.get(j).getDocumentId() != (Integer) data.getValue(i, 2) || // if any of the fields are different, update
-                         statementsInDatabase.get(j).getStart() != (Integer) data.getValue(i, 3) ||
-                         statementsInDatabase.get(j).getStop() != (Integer) data.getValue(i, 4) ||
-                         statementsInDatabase.get(j).getCoderId() != (Integer) data.getValue(i, 5))) {
-                    Statement statement = new Statement(statementsInDatabase.get(j)); // deep copy of the statement, then update fields
-                    statement.setDocumentId((Integer) data.getValue(i, 2));
-                    statement.setStart((Integer) data.getValue(i, 3));
-                    statement.setStop((Integer) data.getValue(i, 4));
-                    statement.setCoderId((Integer) data.getValue(i, 5));
-                    for (int k = 6; k < data.ncol(); k++) { // update all variables
-                        String variableName = data.getVariableName(k);
-                        String dataType = statement.getValueByKey(variableName).getDataType();
-                        if (dataType.equals("short text") || dataType.equals("long text")) {
-                            // if the variable is a short or long text, it is an entity, so we need to create a new Entity object
-                            Entity entity = new Entity((String) data.getValue(i, k));
-                        statement.getValueByKey(variableName).setValue(data.getValue(i, k));
-
-
-                        if (statement.getValues().containsKey(variableName)) {
-                            statement.getValues().get(variableName).setValue(data.getValue(i, k));
-                        } else {
-                            // if the variable does not exist in the statement, add it
-                            statement.addValue(variableName, data.getValue(i, k));
-                        }
-                    }
-                    statementsToUpdate.add(statement);
-                }
-            }
-            if (verbose) {
-				System.out.print("Updating document ID, start/stop caret, or coder ID for " + statementsToMove.size() + " statement(s)... ");
-			}
-            Dna.sql.moveStatements(statementsToMove);
-			if (verbose == true) {
-				System.out.println("Done.");
-			}
-        }
-
-        // 3. update statement contents
-        ArrayList<Statement> statementsToUpdate = new ArrayList<>();
-		for (int i = 0; i < data.nrow(); i++) {
-            for (int j = 0; j < statementsInDatabase.size(); j++) {
-                if (statementsInDatabase.get(j).getId() == (Integer) data.getValue(i, 0)) {
-                    Statement statement = new Statement(statementsInDatabase.get(j)); // deep copy of the statement, then update fields
-                    statement.setDocumentId((Integer) data.getValue(i, 2));
-                    statement.setStart((Integer) data.getValue(i, 3));
-                    statement.setStop((Integer) data.getValue(i, 4));
-                    statement.setCoderId((Integer) data.getValue(i, 5));
-                    statementsToMove.add(statement);
-                }
-            }
-            if (verbose) {
-				System.out.print("Updating document ID, start/stop caret, or coder ID for " + statementsToMove.size() + " statement(s)... ");
-			}
-            Dna.sql.moveStatements(statementsToMove);
-			if (verbose == true) {
-				System.out.println("Done.");
-			}
-        }
-        */
-
-
-
-		/*
-        String[] varNames = new String[numVar];
-		String[] varTypes = new String[numVar];
-		int statementTypeId = statementTypeIDs[0];
-		StatementType st;
-		try {
-			st = this.data.getStatementTypeById(statementTypeId);
-		} catch (NullPointerException npe) {
-			throw new Exception("Statement type ID of the first statement was not found in the database. Aborting.");
-		}
-		LinkedHashMap<String, String> variables = st.getVariables();
-		Iterator<String> iterator = variables.keySet().iterator();
-		int counter = 0;
-		while (iterator.hasNext()) {
-			String key = iterator.next();
-			varNames[counter] = key;
-			varTypes[counter] = variables.get(key);
-			counter++;
-		}
-		if (counter != numVar) {
-			throw new Exception("Number of variables in the data frame does not match the number of variables in the statement type definition. Aborting.");
-		}
-		*/
-		/*
-		// add or update statements
-		for (int i = 0; i < data.nrow(); i++) {
-			boolean update = false;
-
-			// check if statement ID exists in database
-            int foundIndex = -1;
-            for (int j = 0; j < statementsInDatabase.size(); j++) {
-                if (statementsInDatabase.get(j).getId() == (Integer) data.getValue(i, 0)) {
-                    foundIndex = j;
-                    break;
-                }
-            }
-
-			// check if coder field is valid
-			if (this.data.getCoderById(coder[i]) == null) {
-				System.err.println("Statement ID " + id[i] + ": coder ID is invalid. Skipping this statement.");
-			}
-
-			// check if the document ID is valid
-			if (this.data.getDocument(documentId[i]) == null) {
-				System.err.println("Statement ID " + id[i] + ": document ID was not found in the database. Skipping this statement.");
-			}
-						
-			// check if start caret < end caret
-			if (startCaret[i] >= endCaret[i]) {
-				System.err.println("Statement ID " + id[i] + ": end caret is not greater than the start caret, meaning the statement would have zero or negative length. Skipping this statement.");
-			}
-			
-			// check if document length is shorter than the supplied start caret
-			if (this.data.getDocument(documentId[i]).getText().length() - 1 < startCaret[i]) {
-				System.err.println("Statement ID " + id[i] + ": start caret would be after the last character of the document. Skipping this statement.");
-			}
-
-			// check if document length is shorter than the supplied end caret
-			if (this.data.getDocument(documentId[i]).getText().length() < endCaret[i]) {
-				System.err.println("Statement ID " + id[i] + ": end caret would be more than one character after the last character of the document. Skipping this statement.");
-			}
-			
-			// check if statement type matches the first statement type in the 'statements' data frame
-			if (statementTypeId != statementTypeIDs[i]) {
-				System.err.println("Statement ID " + id[i] + ": statement type ID is not identical to the first statement type ID in the data frame. Skipping this statement.");
-			}
-			
-			// check if boolean variables are indeed 0 or 1
-			for (int j = 0; j < numVar; j++) {
-				if (varTypes[j].equals("boolean") && ((int[]) statements[j + 6])[i] != 0 && ((int[]) statements[j + 6])[i] != 1) {
-					System.err.println("Statement ID " + id[i] + ": variable '" + varNames[j] + "' is not 0 or 1. Skipping this statement.");
-				}
-			}
-			
-			if (foundIndex > -1) { // update (rather than add)
-				if (this.data.getStatements().get(foundIndex).getStart() != startCaret[i]) {
-					if (simulate == false) {
-						this.data.getStatements().get(foundIndex).setStart(startCaret[i]);
-					}
-					update = true;
-					updateCountStartCaret++;
-				}
-				if (this.data.getStatements().get(foundIndex).getStop() != endCaret[i]) {
-					if (simulate == false) {
-						this.data.getStatements().get(foundIndex).setStop(endCaret[i]);
-					}
-					update = true;
-					updateCountEndCaret++;
-				}
-				if (this.data.getStatements().get(foundIndex).getDocumentId() != documentId[i]) {
-					if (simulate == false) {
-						this.data.getStatements().get(foundIndex).setDocumentId(documentId[i]);
-					}
-					update = true;
-					updateCountDocumentId++;
-				}
-				if (this.data.getStatements().get(foundIndex).getCoder() != coder[i]) {
-					if (simulate == false) {
-						this.data.getStatements().get(foundIndex).setCoder(coder[i]);
-					}
-					update = true;
-					updateCountCoder++;
-				}
-				
-				// go through remaining variables and update where necessary
-				for (int j = 0; j < numVar; j++) {
-					if (varTypes[j].equals("short text") || varTypes[j].equals("long text")) {
-						String s = ((String[]) statements[j + 6])[i];
-						if (!this.data.getStatements().get(foundIndex).getValues().get(varNames[j]).equals(s)) {
-							if (simulate == false) {
-								// update variable in the database (in memory)
-								this.data.getStatements().get(foundIndex).getValues().put(varNames[j], s);
-							}
-							// also add a new attribute if the value doesn't exist yet in the database (in memory and SQL)
-							if (this.data.getAttributeId(s, varNames[j], statementTypeId) == -1 && !addedAttributes.get(j).contains(s)) {
-								if (verbose == true) {
-									System.out.print("  - New attribute for variable '" + varNames[j] + "': '" + s + "'... ");
-								}
-								int attributeId = this.data.generateNewId("attributes");
-								AttributeVector av = new AttributeVector(attributeId, s, "#000000", "", "", "", "", statementTypeId, varNames[j]);
-								if (simulate == false) {
-									this.data.attributes.add(av);
-									Collections.sort(this.data.getAttributes());
-									this.sql.upsertAttributeVector(av);
-								}
-								addedAttributes.get(j).add(s); // save added attributes in a list so they are not added multiple times in simulation mode
-								if (verbose == true) {
-									System.out.println("Done.");
-								}
-							}
-							update = true;
-							updateCountVariables[j]++;
-						}
-					} else {
-						if ((int) this.data.getStatements().get(foundIndex).getValues().get(varNames[j]) != ((int[]) statements[j + 6])[i]) {
-							if (simulate == false) {
-								this.data.getStatements().get(foundIndex).getValues().put(varNames[j], ((int[]) statements[j + 6])[i]);
-							}
-							update = true;
-							updateCountVariables[j]++;
-						}
-					}
-				}
-
-				if (update == true) {
-					if (verbose == true) {
-						System.out.print("  - Updating statement " + this.data.getStatements().get(foundIndex).getId() + "... ");
-					}
-					if (simulate == false) {
-						this.sql.upsertStatement(this.data.getStatements().get(foundIndex), st.getVariables());
-					}
-					if (verbose == true) {
-						System.out.println("Done.");
-					}
-				}
-			} else { // add (rather than update)
-				int newId = this.data.generateNewId("statements");
-				Statement statement = new Statement(newId, documentId[i], startCaret[i], endCaret[i], this.data.getDocument(documentId[i]).getDate(), statementTypeId, coder[i]);
-				for (int j = 0; j < numVar; j++) {
-					if (varTypes[j].equals("short text") || varTypes[j].equals("long text")) {
-						String s = ((String[]) statements[j + 6])[i];
-
-						// put value in statement (in memory)
-						statement.getValues().put(varNames[j], s);
-
-						// add a new attribute if the value doesn't exist yet in the database (in memory and SQL)
-						if (this.data.getAttributeId(s, varNames[j], statementTypeId) == -1 && !addedAttributes.get(j).contains(s)) {
-							if (verbose == true) {
-								System.out.print("  - New attribute for variable '" + varNames[j] + "': '" + s + "'... ");
-							}
-							int attributeId = this.data.generateNewId("attributes");
-							AttributeVector av = new AttributeVector(attributeId, s, "#000000", "", "", "", "", statementTypeId, varNames[j]);
-							if (simulate == false) {
-								this.data.attributes.add(av);
-								Collections.sort(this.data.getAttributes());
-								this.sql.upsertAttributeVector(av);
-							}
-							addedAttributes.get(j).add(s); // save added attributes in a list so they are not added multiple times in simulation mode
-							if (verbose == true) {
-								System.out.println("Done.");
-							}
-						}
-					} else { // attributes only exist for short or long text variables
-						statement.getValues().put(varNames[j], ((int[]) statements[j + 6])[i]);
-					}
-				}
-				if (verbose == true) {
-					System.out.print("  - Adding statement... ");
-				}
-				if (simulate == false) {
-					this.data.addStatement(statement);
-					System.out.print("New statement ID: " + statement.getId() + "... ");
-					this.sql.addStatement(statement, st.getVariables());
-				}
-				if (verbose == true) {
-					System.out.println("Done.");
-				}
-				updateCountNewStatements++;
-			}
-		}
-
-		// report statistics
-		if (verbose == true) {
-			System.out.println("New statements: " + updateCountNewStatements);
-			System.out.println("Deleted statements: " + updateCountDeleted);
-			System.out.println("Document IDs updated: " + updateCountDocumentId);
-			System.out.println("Start carets updated: " + updateCountStartCaret);
-			System.out.println("End carets updated: " + updateCountEndCaret);
-			System.out.println("Coders updated: " + updateCountCoder);
-			for (int i = 0; i < numVar; i++) {
-				System.out.println("Updated variable '" + varNames[i] + "': " + updateCountVariables[i]);
-			}
-		}
-	}
-    */
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    /*
-    public static void setStatements(DataFrame df, boolean simulate, boolean verbose) throws Exception {
-        if (df == null || df.nrow() == 0) return;
-
-        ArrayList<String> varNames = df.getVariableNames();
-
-        // Standard columns
-        List<String> stdCols = List.of("ID", "document_id", "start", "stop", "statement_type_id", "coder_id");
-        for (String col : stdCols) {
-            if (!varNames.contains(col)) {
-                throw new IllegalArgumentException("Missing required column: " + col);
-            }
-        }
-
-        // Extract metadata from the first row
-        int statementTypeId = (Integer) df.getValue(0, "statement_type_id");
-        StatementType st = Dna.sql.getStatementType(statementTypeId);
-        if (st == null) {
-            throw new Exception("Statement type ID " + statementTypeId + " not found.");
-        }
-
-        LinkedHashMap<String, String> variableMeta = st.getVariables();
-        ArrayList<String> variableCols = new ArrayList<>(varNames);
-        variableCols.removeAll(stdCols);
-
-        if (variableCols.size() != variableMeta.size()) {
-            throw new Exception("Mismatch between DataFrame variables and statement type definition.");
-        }
-
-        ArrayList<Integer> dfIds = new ArrayList<>();
-        for (int i = 0; i < df.nrow(); i++) {
-            dfIds.add((Integer) df.getValue(i, "ID"));
-        }
-
-        // 1. Identify statements to delete
-        int[] toDelete = Dna.sql.getStatements(null, statementTypeId, null, null, null, false, null, false, null, false, null, false)
-            .stream()
-            .filter(s -> !dfIds.contains(s.getId()))
-            .mapToInt(s -> s.getId())
-            .toArray();
-        if (!simulate && toDelete.length > 0) {
-            if (verbose) System.out.println("Deleting " + toDelete.length + " statements.");
-        } else if (verbose) {
-            System.out.println("No statements to delete.");
-        }
-        if (toDelete.length > 0) {
-            if (!simulate) {
-                Dna.sql.deleteStatements(toDelete);
-            }
-        }
-
-
-
-        // 2. Add or update statements
-        for (int i = 0; i < df.nrow(); i++) {
-            int id = (Integer) df.getValue(i, "ID");
-            int docId = (Integer) df.getValue(i, "document_id");
-            int start = (Integer) df.getValue(i, "start");
-            int stop = (Integer) df.getValue(i, "stop");
-            int coderId = (Integer) df.getValue(i, "coder_id");
-
-            if (Dna.data.getCoderById(coderId) == null || Dna.data.getDocument(docId) == null) {
-                if (verbose) System.err.println("Invalid coder or document for statement ID " + id + ". Skipping.");
-                continue;
-            }
-
-            if (start >= stop || stop > Dna.data.getDocument(docId).getText().length()) {
-                if (verbose) System.err.println("Invalid caret range for statement ID " + id + ". Skipping.");
-                continue;
-            }
-
-            Statement existing = Dna.data.getStatementById(id);
-            boolean isNew = existing == null;
-
-            Statement s = new Statement(id, docId, start, stop,
-                    Dna.data.getDocument(docId).getDate(), statementTypeId, coderId);
-
-            for (String var : variableCols) {
-                Object val = df.getValue(i, var);
-                String type = variableMeta.get(var);
-
-                if (type.equals("short text")) {
-                    Entity e = Dna.sql.getOrInsertEntity(var, (String) val, statementTypeId);
-                    s.getValues().add(new Value(var, e, "short text"));
-                } else if (type.equals("long text")) {
-                    s.getValues().add(new Value(var, val, "long text"));
-                } else if (type.equals("boolean")) {
-                    int b = ((Number) val).intValue();
-                    if (b != 0 && b != 1) {
-                        if (verbose) System.err.println("Invalid boolean value for statement ID " + id);
-                        continue;
-                    }
-                    s.getValues().add(new Value(var, b, "boolean"));
-                } else if (type.equals("integer")) {
-                    s.getValues().add(new Value(var, ((Number) val).intValue(), "integer"));
-                }
-            }
-
-            if (simulate) {
-                if (verbose) System.out.println((isNew ? "Simulate add" : "Simulate update") + " for statement ID " + id);
-            } else {
-                if (isNew) {
-                    Dna.sql.addStatement(s, variableMeta);
-                } else {
-                    Dna.sql.upsertStatement(s, variableMeta);
-                }
-                Dna.data.addOrUpdateStatement(s);
-                if (verbose) System.out.println((isNew ? "Added" : "Updated") + " statement ID " + id);
-            }
-        }
-    }
-    */
 }

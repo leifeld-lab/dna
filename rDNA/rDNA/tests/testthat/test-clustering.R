@@ -2,7 +2,6 @@ context("clustering")
 
 # example 1: compute 12 cluster solutions for one time point
 test_that("Example 1 produces expected output", {
-  testthat::skip_on_ci()
   skip_if_not_installed("igraph", minimum_version = "0.8.1")
   skip_if_not_installed("sna", minimum_version = "2.4")
   skip_if_not_installed("cluster", minimum_version = "1.12.0")
@@ -26,7 +25,6 @@ test_that("Example 1 produces expected output", {
 
 # example 2: compute only Girvan-Newman edge betweenness with two clusters
 test_that("Example 2 produces expected output", {
-  testthat::skip_on_ci()
   skip_if_not_installed("igraph", minimum_version = "0.8.1")
   samp <- dna_sample(overwrite = TRUE)
   dna_openDatabase(samp, coderId = 1, coderPassword = "sample")
@@ -59,7 +57,6 @@ test_that("Example 2 produces expected output", {
 
 # example 3: smoothed modularity using time window algorithm
 test_that("Example 3 produces expected output", {
-  testthat::skip_on_ci()
   skip_if_not_installed("igraph", minimum_version = "0.8.1")
   skip_if_not_installed("sna", minimum_version = "2.4")
   skip_if_not_installed("cluster", minimum_version = "1.12.0")

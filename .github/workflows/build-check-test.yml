@@ -6,28 +6,15 @@ jobs:
   Bibliography:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - uses: r-lib/actions/setup-tinytex@v2
 
     - name: Install LaTeX packages
       run: tlmgr install urlbst
 
     - uses: gradle/actions/wrapper-validation@v4
-    - uses: actions/cache@v3
-      id: pandoc
-      with:
-        path: pandoc-2.19.2-1
-        key: pandoc-2.19.2-1
-    - name: Download pandoc-2.19.2-1-amd64.deb
-      if: steps.pandoc.outputs.cache-hit != 'true'
-      run: |
-        mkdir pandoc-2.19.2-1
-        cd pandoc-2.19.2-1
-        wget https://github.com/jgm/pandoc/releases/download/2.19.2/pandoc-2.19.2-1-amd64.deb
-    - name: Install pandoc
-      run: |
-        cd pandoc-2.19.2-1
-        sudo dpkg -i pandoc-2.19.2-1-amd64.deb
+
+    - uses: r-lib/actions/setup-pandoc@v2
 
     - name: Check pandoc version
       run: pandoc --version
@@ -47,7 +34,7 @@ jobs:
   DNA:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - uses: gradle/actions/wrapper-validation@v4
     - uses: actions/setup-java@v3
       with:
@@ -67,19 +54,12 @@ jobs:
         name: DNA
         path: build/*.jar
 
-
   rDNA:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - uses: r-lib/actions/setup-r@v2
-
-    - name: Restore R Packages
-      uses: actions/cache@v3
-      with:
-        path: ~/.cache/R
-        key: ${{ runner.os }}-r-rDNA-${{ hashFiles('**/DESCRIPTION') }}-v1
 
     - uses: r-lib/actions/setup-r-dependencies@v2
       with:
@@ -92,12 +72,6 @@ jobs:
 
     - name: Setup Gradle
       uses: gradle/gradle-build-action@v2.4.2
-
-    - name: Restore Gradle Cache
-      uses: actions/cache@v3
-      with:
-        path: ~/.gradle/caches
-        key: ${{ runner.os }}-gradle-${{ hashFiles('**/build.gradle') }}-v1
 
     - name: Execute Gradle build for rDNA
       run: ./gradlew :rDNA:build
@@ -128,19 +102,13 @@ jobs:
       R_KEEP_PKG_SOURCE: yes
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - uses: r-lib/actions/setup-r@v2
         with:
           r-version: ${{ matrix.config.r }}
           http-user-agent: ${{ matrix.config.http-user-agent }}
           use-public-rspm: true
-
-      - name: Restore R Packages
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/R
-          key: ${{ runner.os }}-r-rDNA-check-${{ hashFiles('**/DESCRIPTION') }}-v1
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:

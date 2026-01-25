@@ -64,7 +64,7 @@ public class Entity implements Comparable<Entity> {
 		this.value = value;
 		this.color = color;
 		this.inDatabase = inDatabase;
-		this.attributeValues = attributeValues;
+		this.attributeValues = (attributeValues == null) ? new HashMap<>() : new HashMap<>(attributeValues);
 	}
 
 	/**
@@ -78,7 +78,7 @@ public class Entity implements Comparable<Entity> {
 		this.variableId = variableId;
 		this.color = color;
 		this.inDatabase = true;
-		this.attributeValues = null;
+		this.attributeValues = new HashMap<>();
 	}
 
 	/**
@@ -92,7 +92,7 @@ public class Entity implements Comparable<Entity> {
 		this.variableId = -1;
 		this.color = new Color(0, 0, 0);
 		this.inDatabase = false;
-		this.attributeValues = null;
+		this.attributeValues = new HashMap<>();
 	}
 
 	/**
