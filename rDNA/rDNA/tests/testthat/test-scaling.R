@@ -14,7 +14,7 @@ cleanup_dna_database <- function(samp) {
 }
 
 test_that("dna_scale1dbin produces expected output with help file example", {
-  testthat::skip_on_ci()
+  dna_init()
   samp <- setup_dna_database()
 
   sink(nullfile())
@@ -60,7 +60,7 @@ test_that("dna_scale1dbin produces expected output with help file example", {
 })
 
 test_that("dna_scale2dbin produces expected output with help file example", {
-  testthat::skip_on_ci()
+  dna_init()
   samp <- setup_dna_database()
 
   sink(nullfile())
@@ -101,6 +101,7 @@ test_that("dna_scale2dbin produces expected output with help file example", {
 })
 
 test_that("dna_scale1dord produces expected output with help file example", {
+  dna_init()
   samp <- setup_dna_database()
 
   sink(nullfile())
@@ -141,6 +142,7 @@ test_that("dna_scale1dord produces expected output with help file example", {
 })
 
 test_that("dna_scale2dord produces expected output with help file example", {
+  dna_init()
   samp <- setup_dna_database()
 
   sink(nullfile())

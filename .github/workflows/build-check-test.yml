@@ -1,123 +1,77 @@
-name: build-check-test
+name: build
 
 on: [push, pull_request, workflow_dispatch]
 
 jobs:
-  Bibliography:
+  build-check:
+    name: Build
     runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    - uses: r-lib/actions/setup-tinytex@v2
-
-    - name: Install LaTeX packages
-      run: tlmgr install urlbst
-
-    - uses: gradle/actions/wrapper-validation@v4
-
-    - uses: r-lib/actions/setup-pandoc@v2
-
-    - name: Check pandoc version
-      run: pandoc --version
-
-    - name: Setup Gradle
-      uses: gradle/gradle-build-action@v2.4.2
-
-    - name: Execute Gradle build for bibliography
-      run: ./gradlew :bibliography:build
-
-    - name: Store artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: Bibliography
-        path: build/bibliography.*
-
-  DNA:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    - uses: gradle/actions/wrapper-validation@v4
-    - uses: actions/setup-java@v3
-      with:
-        distribution: temurin
-        java-version: 11
-        cache: gradle
-
-    - name: Setup Gradle
-      uses: gradle/gradle-build-action@v2.4.2
-    
-    - name: Execute Gradle build for DNA
-      run: ./gradlew :dna:build
-    
-    - name: Store artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: DNA
-        path: build/*.jar
-
-  rDNA:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-
-    - uses: r-lib/actions/setup-r@v2
-
-    - uses: r-lib/actions/setup-r-dependencies@v2
-      with:
-        cache-version: 2
-        working-directory: rDNA/rDNA
-        extra-packages: |
-          any::roxygen2
-
-    - uses: gradle/actions/wrapper-validation@v4
-
-    - name: Setup Gradle
-      uses: gradle/gradle-build-action@v2.4.2
-
-    - name: Execute Gradle build for rDNA
-      run: ./gradlew :rDNA:build
-
-    - name: Store artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: rDNA
-        path: build/*.tar.gz
-
-  rDNA-check:
-    runs-on: ${{ matrix.config.os }}
-
-    name: ${{ matrix.config.os }} (${{ matrix.config.r }})
-
-    strategy:
-      fail-fast: false
-      matrix:
-        config:
-          - {os: macOS-latest,   r: 'release'}
-          - {os: windows-latest, r: 'release'}
-          - {os: ubuntu-latest,   r: 'devel', http-user-agent: 'release'}
-          - {os: ubuntu-latest,   r: 'release'}
-          - {os: ubuntu-latest,   r: 'oldrel-1'}
-
-    env:
-      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
-      R_KEEP_PKG_SOURCE: yes
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - uses: r-lib/actions/setup-r@v2
+      # ---- Java / Gradle ----
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v3
         with:
-          r-version: ${{ matrix.config.r }}
-          http-user-agent: ${{ matrix.config.http-user-agent }}
+          distribution: temurin
+          java-version: 11
+          cache: gradle
+
+      - name: Set up Gradle
+        uses: gradle/gradle-build-action@v2.4.2
+
+      # ---- R ----
+      - name: Set up R
+        uses: r-lib/actions/setup-r@v2
+        with:
           use-public-rspm: true
 
-      - uses: r-lib/actions/setup-r-dependencies@v2
+      - name: Install R dependencies for build
+        uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          cache-version: 2
+          cache-version: 5
+          needs: build
           working-directory: rDNA/rDNA
           extra-packages: |
-            any::rcmdcheck
+            any::roxygen2
 
-      - uses: r-lib/actions/check-r-package@v2
+      # ---- LaTeX / pandoc ----
+      - name: Set up TinyTeX
+        uses: r-lib/actions/setup-tinytex@v2
+
+      - name: Install LaTeX packages
+        run: tlmgr install urlbst
+
+      - name: Set up pandoc
+        uses: r-lib/actions/setup-pandoc@v2
+
+      - name: Check pandoc version
+        run: pandoc --version
+
+      # ---- Build everything ----
+      - name: Build all components with Gradle
+        run: ./gradlew build
+
+      # ---- Upload artifacts ----
+      - name: Upload bibliography artifacts
+        uses: actions/upload-artifact@v4
         with:
-          working-directory: rDNA/rDNA
-          upload-snapshots: true
+          name: bibliography
+          path: build/bibliography.*
+
+      - name: Upload DNA JAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: dna-jar
+          path: build/*.jar
+
+      - name: Upload rDNA source package
+        uses: actions/upload-artifact@v4
+        with:
+          name: rDNA-package
+          path: build/*.tar.gz

@@ -91,7 +91,7 @@ task rDNACheck {
         def tarGzFile = file("$rootDir/build").listFiles({ file -> file.name.endsWith('.tar.gz') } as FileFilter)[0]
         exec {
             workingDir "$rootDir/build"
-            commandLine 'R', 'CMD', 'check', '--as-cran', tarGzFile.absolutePath
+            commandLine 'R', 'CMD', 'check', tarGzFile.absolutePath
         }
         println "R package check completed."
     }

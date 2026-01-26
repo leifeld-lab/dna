@@ -2,9 +2,7 @@ context("clustering")
 
 # example 1: compute 12 cluster solutions for one time point
 test_that("Example 1 produces expected output", {
-  skip_if_not_installed("igraph", minimum_version = "0.8.1")
-  skip_if_not_installed("sna", minimum_version = "2.4")
-  skip_if_not_installed("cluster", minimum_version = "1.12.0")
+  dna_init()
   samp <- dna_sample(overwrite = TRUE)
   dna_openDatabase(samp, coderId = 1, coderPassword = "sample")
   mc1 <- dna_multiclust(variable1 = "organization",
@@ -25,7 +23,7 @@ test_that("Example 1 produces expected output", {
 
 # example 2: compute only Girvan-Newman edge betweenness with two clusters
 test_that("Example 2 produces expected output", {
-  skip_if_not_installed("igraph", minimum_version = "0.8.1")
+  dna_init()
   samp <- dna_sample(overwrite = TRUE)
   dna_openDatabase(samp, coderId = 1, coderPassword = "sample")
   set.seed(12345)
@@ -57,9 +55,7 @@ test_that("Example 2 produces expected output", {
 
 # example 3: smoothed modularity using time window algorithm
 test_that("Example 3 produces expected output", {
-  skip_if_not_installed("igraph", minimum_version = "0.8.1")
-  skip_if_not_installed("sna", minimum_version = "2.4")
-  skip_if_not_installed("cluster", minimum_version = "1.12.0")
+  dna_init()
   samp <- dna_sample(overwrite = TRUE)
   dna_openDatabase(samp, coderId = 1, coderPassword = "sample")
   mc3 <- dna_multiclust(k = 2,

@@ -2,6 +2,7 @@ context("Testing polarization")
 
 # Create a function to set up the database for tests
 setup_dna_database <- function() {
+  dna_init()
   samp <- dna_sample(overwrite = TRUE)
   dna_openDatabase(samp, coderId = 1, coderPassword = "sample")
   return(samp)

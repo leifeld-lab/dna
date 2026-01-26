@@ -1,6 +1,7 @@
 context("data access")
 
 preparation <- function() {
+  dna_init()
   dna_sample(overwrite = TRUE)
   dna_openDatabase(db_url = "sample.dna", coderId = 1, coderPassword = "sample")
 }
@@ -46,7 +47,6 @@ test_that("dna_network, as.matrix, print, autoplot, and dna_tidygraph work", {
 })
 
 test_that("dna_tidygraph works", {
-  skip_if_not_installed("tidygraph", minimum_version = "1.3.1")
   preparation()
 
   nw <- dna_network(networkType = "twomode")

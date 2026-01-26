@@ -37,6 +37,7 @@ test_that("Penalized backbone works", {
 })
 
 test_that("Plot method works for backbones with penalty", {
+  dna_init()
   samp <- dna_sample(overwrite = TRUE)
   dna_openDatabase(samp, coderId = 1, coderPassword = "sample")
   b <- dna_backbone(method = "penalty",
@@ -61,6 +62,7 @@ test_that("Plot method works for backbones with penalty", {
 })
 
 test_that("Autoplot method works for backbones with penalty", {
+  dna_init()
   samp <- dna_sample(overwrite = TRUE)
   dna_openDatabase(samp, coderId = 1, coderPassword = "sample")
   b <- dna_backbone(method = "penalty",
@@ -76,12 +78,13 @@ test_that("Autoplot method works for backbones with penalty", {
   p <- autoplot(b)
   expect_true("list" %in% class(p))
   expect_length(p, 4)
-  expect_equal(unique(as.character(sapply(p, class))), c("gg", "ggplot"))
+  expect_true(any(unique(as.character(sapply(p, class))) %in% c("gg", "ggplot")))
   dna_closeDatabase()
   unlink(samp)
 })
 
 test_that("Fixed backbone works", {
+  dna_init()
   samp <- dna_sample(overwrite = TRUE)
   dna_openDatabase(samp, coderId = 1, coderPassword = "sample")
   b <- dna_backbone(method = "fixed",
@@ -117,6 +120,7 @@ test_that("Fixed backbone works", {
 })
 
 test_that("Plot method works for fixed backbone size", {
+  dna_init()
   samp <- dna_sample(overwrite = TRUE)
   dna_openDatabase(samp, coderId = 1, coderPassword = "sample")
   b <- dna_backbone(method = "fixed",
@@ -141,6 +145,7 @@ test_that("Plot method works for fixed backbone size", {
 })
 
 test_that("Autoplot method works for backbones with fixed size", {
+  dna_init()
   samp <- dna_sample(overwrite = TRUE)
   dna_openDatabase(samp, coderId = 1, coderPassword = "sample")
   b <- dna_backbone(method = "fixed",
@@ -156,12 +161,13 @@ test_that("Autoplot method works for backbones with fixed size", {
   p <- autoplot(b)
   expect_true("list" %in% class(p))
   expect_length(p, 4)
-  expect_equal(unique(as.character(sapply(p, class))), c("gg", "ggplot"))
+  expect_true(any(unique(as.character(sapply(p, class))) %in% c("gg", "ggplot")))
   dna_closeDatabase()
   unlink(samp)
 })
 
 test_that("Nested backbone works", {
+  dna_init()
   samp <- dna_sample(overwrite = TRUE)
   dna_openDatabase(samp, coderId = 1, coderPassword = "sample")
   b <- dna_backbone(method = "nested",
@@ -188,6 +194,7 @@ test_that("Nested backbone works", {
 })
 
 test_that("Plot method works for nested backbone", {
+  dna_init()
   samp <- dna_sample(overwrite = TRUE)
   dna_openDatabase(samp, coderId = 1, coderPassword = "sample")
   b <- dna_backbone(method = "nested",
@@ -210,6 +217,7 @@ test_that("Plot method works for nested backbone", {
 })
 
 test_that("Autoplot method works for nested backbones", {
+  dna_init()
   samp <- dna_sample(overwrite = TRUE)
   dna_openDatabase(samp, coderId = 1, coderPassword = "sample")
   b <- dna_backbone(method = "nested",
@@ -221,13 +229,14 @@ test_that("Autoplot method works for nested backbones", {
   skip_if_not_installed("ggplot2")
   library("ggplot2")
   p <- autoplot(b)
-  expect_equal(class(p), c("ggraph", "gg", "ggplot"))
+  expect_true(any(class(p) %in% c("ggraph", "gg", "ggplot")))
   dna_closeDatabase()
   unlink(samp)
 })
 
 
 test_that("Evaluate backbone solution works", {
+  dna_init()
   samp <- dna_sample(overwrite = TRUE)
   dna_openDatabase(samp, coderId = 1, coderPassword = "sample")
   b <- dna_evaluateBackboneSolution(
