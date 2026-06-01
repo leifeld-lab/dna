@@ -105,7 +105,7 @@ download.file(url = u, destfile = dest, mode = "wb")
 
 - If you have questions or want to report bugs, please create an issue in the [issue tracker](https://github.com/leifeld/dna/issues).
 
-- Join the the DNA community on [Matrix](https://matrix.to/#/#dna:yatrix.org). Matrix is a chat protocol. It's similar to Slack, Discord, or WhatsApp, but without the corporate shackles. It's free, open-source, decentralised, and secure. We have set up a public space called [#dna:yatrix.org](https://matrix.to/#/#dna:yatrix.org) with separate chat rooms for installation, research, and development. It's really easy to join: You first create an account on one of the many Matrix [servers](https://joinmatrix.org/servers/) (we use and recommend [yatrix.org](https://element.yatrix.org/)), then download one of the many Matrix [clients](https://matrix.org/ecosystem/clients/) on your phone, computer, or the web (e.g., Element) to use the account with, and finally join [#dna:yatrix.org](https://matrix.to/#/#dna:yatrix.org). To simplify the process, you can just click on [this invitation link](https://matrix.to/#/#dna:yatrix.org) for some sensible default choices. Make sure you join all four public rooms (you can mute their notifications as needed) and look at the rules in the #dna-welcome room upon arrival.
+- [Discussions](https://github.com/leifeld-lab/dna/discussions): Ask questions, introduce yourself or your DNA application, or engage with the DNA community. We used to have a Matrix channel for real-time chats about DNA but recently retired it. The Discussion forum will take its place. It currently looks pretty empty because it's new, but feel free to give it a try to get the ball rolling.
 
 ## Support the project
 
