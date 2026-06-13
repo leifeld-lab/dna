@@ -6,6 +6,7 @@ import logger.LogEvent;
 import logger.Logger;
 import me.tongfei.progressbar.ProgressBar;
 import model.Color;
+import model.Document;
 import model.Entity;
 import model.Statement;
 import model.StatementType;
@@ -15,6 +16,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -980,4 +982,66 @@ public class DataExchange {
         int statementId = Dna.sql.addStatement(s);
         return statementId;
 	}
+
+
+	/* =================================================================================================================
+	 * Functions for managing documents
+	 * =================================================================================================================
+	 */
+
+    /**
+     * Get a data frame with all documents with specific document IDs.
+     *
+     * @param documentIds An array of document IDs to retrieve. If this array is empty, all documents are retrieved.
+     * @return A data frame with the following columns: document_id, coder_id, title, text, author, source, section, type, notes, date_time, and statements.
+     */
+    static public DataFrame getDocuments(int[] documentIds) {
+
+        ArrayList<Document> documents = Dna.sql.getDocuments(documentIds);
+
+        if (documents.isEmpty())
+            return new DataFrame();
+
+        DataFrame df = new DataFrame();
+
+        ArrayList<Object> ids = new ArrayList<>();
+        ArrayList<Object> coders = new ArrayList<>();
+        ArrayList<Object> titles = new ArrayList<>();
+        ArrayList<Object> texts = new ArrayList<>();
+        ArrayList<Object> authors = new ArrayList<>();
+        ArrayList<Object> sources = new ArrayList<>();
+        ArrayList<Object> sections = new ArrayList<>();
+        ArrayList<Object> types = new ArrayList<>();
+        ArrayList<Object> notes = new ArrayList<>();
+        ArrayList<Object> dateTimes = new ArrayList<>();
+        ArrayList<Object> statementFrequencies = new ArrayList<>();
+
+        for (Document d : documents) {
+            ids.add(d.getId());
+            coders.add(d.getCoder());
+            titles.add(d.getTitle());
+            texts.add(d.getText());
+            authors.add(d.getAuthor());
+            sources.add(d.getSource());
+            sections.add(d.getSection());
+            types.add(d.getType());
+            notes.add(d.getNotes());
+            dateTimes.add(d.getDateTime().toEpochSecond(ZoneOffset.UTC));
+            statementFrequencies.add(d.getStatements().size());
+        }
+
+        df.addColumn("document_id", "int", ids);
+        df.addColumn("coder_id", "int", coders);
+        df.addColumn("title", "String", titles);
+        df.addColumn("text", "String", texts);
+        df.addColumn("author", "String", authors);
+        df.addColumn("source", "String", sources);
+        df.addColumn("section", "String", sections);
+        df.addColumn("type", "String", types);
+        df.addColumn("notes", "String", notes);
+        df.addColumn("date_time", "long", dateTimes);
+        df.addColumn("statements", "int", statementFrequencies);
+
+        return df;
+    }
 }

@@ -43,6 +43,11 @@ statements <- dna_getStatements(statementType = 1, statementIds = c(1, 2))
 statements
 }
 }
+\seealso{
+Other statements: 
+\code{\link{dna_addStatement}()},
+\code{\link{print.dna_statements}()}
+}
 \author{
 Philip Leifeld
 }

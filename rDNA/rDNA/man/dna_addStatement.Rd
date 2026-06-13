@@ -53,6 +53,12 @@ types have different variables, the \code{...} argument catches all
 variables and their values supplied by the user. The statement ID will be
 automatically generated and returned.
 }
+\seealso{
+Other statements: 
+\code{\link{dna_getStatements}()},
+\code{\link{print.dna_statements}()}
+}
 \author{
 Philip Leifeld
 }
+\concept{statements}

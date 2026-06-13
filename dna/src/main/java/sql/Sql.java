@@ -1881,22 +1881,24 @@ public class Sql {
 	 * edited in a {@link gui.DocumentEditor DocumentEditor} dialog. The
 	 * documents do not contain any statements.
 	 * 
-	 * @param documentIds    An array of document IDs for which the data should
-	 *   be queried.
-	 * @return             An {@link java.util.ArrayList ArrayList} of
-	 *   {@link model.Document Document} objects, containing the documents and
-	 *   their meta-data.
+	 * @param documentIds  An array of document IDs for which the data should be queried. All documents are returned if the array is empty.
+	 * @return             An {@link java.util.ArrayList ArrayList} of {@link model.Document Document} objects, containing the documents and their meta-data.
 	 */
 	public ArrayList<Document> getDocuments(int[] documentIds) {
 		ArrayList<Document> documents = new ArrayList<Document>();
-		String sql = "SELECT * FROM DOCUMENTS WHERE ID IN (";
-		for (int i = 0; i < documentIds.length; i++) {
-			sql = sql + documentIds[i];
-			if (i < documentIds.length - 1) {
-				sql = sql + ", ";
+		String sql;
+		if (documentIds.length == 0) {
+			sql = "SELECT * FROM DOCUMENTS;";
+		} else {
+			sql = "SELECT * FROM DOCUMENTS WHERE ID IN (";
+			for (int i = 0; i < documentIds.length; i++) {
+				sql = sql + documentIds[i];
+				if (i < documentIds.length - 1) {
+					sql = sql + ", ";
+				}
 			}
+			sql = sql + ");";
 		}
-		sql = sql + ");";
 		try (Connection conn = getDataSource().getConnection();
 				PreparedStatement s = conn.prepareStatement(sql)) {
 			ResultSet rs = s.executeQuery();

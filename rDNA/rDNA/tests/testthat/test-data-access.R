@@ -48,6 +48,9 @@ test_that("statement management works", {
   expect_equal(st[15, 9], "There should be legislation to regulate emissions.")
   expect_equal(st, dna_getStatements(statementType = "DNA Statement", statementIds = numeric()))
 
+  # print method for dna_getStatements
+  expect_output(print(st), "Energy an\\* CO2 legis\\*         0")
+
   # dna_addStatement
   doc_id <- max(st$document_id)
   last_statement_id <- max(st$ID)
@@ -157,6 +160,38 @@ test_that("attribute management works", {
   expect_equal(dim(dna_getAttributes(variableId = 2)), c(8, 7))
   expect_equal(colnames(dna_getAttributes(variableId = 2)), c("ID", "value", "color", "Type", "Alias", "Notes", "newVar"))
 
+  dna_closeDatabase()
+  unlink("sample.dna")
+})
+
+test_that("document management works", {
+  dna_init()
+  samp <- dna_sample(overwrite = TRUE)
+  dna_openDatabase(samp, coderId = 1, coderPassword = "sample")
+
+  # dna_getDocuments
+  doc <- dna_getDocuments()
+  expect_true("dna_documents" %in% class(doc))
+  expect_true(is.data.frame(doc))
+  expect_s3_class(doc, "dna_documents")
+  expect_equal(nrow(doc), 7)
+  expect_equal(ncol(doc), 10)
+  expect_equal(colnames(doc), c("document_id", "coder_id", "title", "text", "author", "source", "section", "type", "notes", "date_time"))
+  expect_s3_class(doc$date_time, "POSIXct")
+  expect_equal(unname(which(sapply(doc, is.integer))), 1:2)
+  expect_equal(unname(which(sapply(doc, is.character))), 3:9)
+
+  # dna_getDocuments with specified document IDs
+  doc2 <- dna_getDocuments(documentIds = doc$document_id[c(1, nrow(doc))])
+  doc2
+  expect_equal(nrow(doc2), 2)
+  expect_equal(ncol(doc2), 11)
+
+  # print method for dna_getDocuments
+  expect_output(print(doc), "2 109-876: \\* \\\\nTestimon\\* Bluestein\\*    109     876")
+
+  rm(doc)
+  rm(doc2)
   dna_closeDatabase()
   unlink("sample.dna")
 })

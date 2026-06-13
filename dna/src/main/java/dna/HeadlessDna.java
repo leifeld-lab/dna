@@ -1387,4 +1387,33 @@ public class HeadlessDna implements Logger.LogListener {
 			l.print();
 		}
 	}
+
+
+	/* =================================================================================================================
+	 * Functions for managing documents
+	 * =================================================================================================================
+	 */
+
+	public DataFrame getDocuments(int[] documentIds) {
+		DataFrame df = sql.DataExchange.getDocuments(documentIds);
+		if (df == null) {
+			LogEvent l = new LogEvent(Logger.ERROR,
+					"Documents could not be retrieved.",
+					"The documents could not be retrieved from the database. Perhaps the database connection failed.");
+			Dna.logger.log(l);
+			return null;
+		}
+		if (df.nrow() == 0) {
+			LogEvent l = new LogEvent(Logger.WARNING,
+					"No documents found.",
+					"The documents were retrieved from the database, but no documents were found. Perhaps the database is empty.");
+			Dna.logger.log(l);
+		} else {
+			LogEvent l = new LogEvent(Logger.MESSAGE,
+					"Documents have been queried.",
+					"The documents have been successfully retrieved from the database.");
+			Dna.logger.log(l);
+		}
+		return df;
+	}
 }

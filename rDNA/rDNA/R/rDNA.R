@@ -1083,6 +1083,7 @@ dna_getStatements <- function(statementType = 1, statementIds = integer()) {
 #'
 #' @author Philip Leifeld
 #'
+#' @family statements
 #' @importFrom rJava .jarray
 #' @importFrom rJava .jcall
 #' @export
@@ -1174,4 +1175,154 @@ dna_addStatement <- function(documentID,
                varNames,
                values)
   return(id)
+}
+
+#' Print a \code{dna_statements} object
+#'
+#' Show details of a \code{dna_statements} object, with trimmed column widths.
+#'
+#' @param x A \code{dna_statements} object, as returned by the
+#'   \code{\link{dna_getStatements}} function.
+#' @param trim Number of maximum characters to display per column. Contents with
+#'   more characters, such as organisation names or concepts, are truncated for
+#'   more compact display, and the last character is replaced by an asterisk
+#'   (\code{*}).
+#' @param ... Additional arguments for the print function.
+#'
+#' @author Philip Leifeld
+#'
+#' @family statements
+#'
+#' @export
+print.dna_statements <- function(x, trim = 10, ...) {
+  print(data.frame(lapply(x, function(col) {
+      if (is.character(col)) {
+        sapply(col, function(r) if (nchar(r) > trim) paste0(substr(r, 1, trim - 1), "*") else r)
+      } else {
+        col
+      }
+    }),
+    row.names = NULL), ...)
+}
+
+# Documents --------------------------------------------------------------------
+
+#' Retrieve documents from the DNA database
+#'
+#' Retrieve documents from the DNA database.
+#'
+#' This function retrieves documents from the DNA database and returns them as a
+#' data frame. If no document IDs are specified, all documents are returned. If
+#' document IDs are specified, only those documents are returned. The function
+#' returns a data frame with one row per document and columns for the document
+#' ID, name, text, coder ID, and date/time of creation.
+#'
+#' @param documentIds A vector of document IDs to retrieve. If this argument is
+#'   not supplied or is an empty vector, all documents are returned. If this
+#'   argument is supplied, only the documents with the given IDs are returned.
+#' @return A data frame with the documents of the given IDs. The data frame has
+#'   one row per document and columns for the document ID, coder ID, title,
+#'   text, and date/time, among other variables.
+#'
+#' @examples
+#' \dontrun{
+#' dna_init()
+#' dna_sample()
+#' dna_openDatabase(coderId = 1,
+#'                  coderPassword = "sample",
+#'                  db_url = "sample.dna")
+#' documents <- dna_getDocuments()
+#' documents
+#' documents <- dna_getDocuments(documentIds = c(1, 2))
+#' documents
+#' }
+#' @author Philip Leifeld
+#' @family documents
+#' @importFrom rJava .jcall .jarray
+#' @export
+dna_getDocuments <- function(documentIds = integer()) {
+  if (is.null(documentIds) || !is.numeric(documentIds)) {
+    documentIds <- integer(0)
+    warning("'documentIds' must be an integer vector. Using default value of integer(0) to include all documents.")
+  } else if (is.numeric(documentIds) && !is.integer(documentIds)) {
+    documentIds <- as.integer(documentIds)
+  }
+
+  # get the documents from the DNA database using rJava
+  s <- .jcall(dna_api(),
+              "Ldna/export/DataFrame;",
+              "getDocuments",
+              .jarray(documentIds))
+  if (is.jnull(s)) {
+    warning("No documents were returned from the DNA database.")
+    return(data.frame())
+  }
+
+  var_names <- .jcall(s, "[S", "getVariableNamesArray")
+  data_types <- .jcall(s, "[S", "getDataTypesArray")
+
+  nr <- .jcall(s, "I", "nrow")
+  if (nr == 0) {
+    return(data.frame())
+  }
+
+  l <- list()
+  for (j in seq_along(var_names)) {
+    if (data_types[j] == "int") {
+      v <- integer(nr)
+      for (i in 0:(nr - 1)) {
+        v[i + 1] <- J(s, "getValue", as.integer(i), as.integer(j - 1))
+      }
+      l[[var_names[j]]] <- v
+    } else if (data_types[j] == "long" && var_names[j] == "date_time") {
+      v <- as.POSIXct(integer(nr), origin = "1970-01-01", tz = "UTC")
+      for (i in 0:(nr - 1)) {
+        v[i + 1] <- as.POSIXct(J(s, "getValue", as.integer(i), as.integer(j - 1)), origin = "1970-01-01", tz = "UTC")
+      }
+      l[[var_names[j]]] <- v
+    } else if (data_types[j] == "String") {
+      v <- character(nr)
+      for (i in 0:(nr - 1)) {
+        v[i + 1] <- J(s, "getValue", as.integer(i), as.integer(j - 1))
+      }
+      l[[var_names[j]]] <- v
+    }
+  }
+
+  dat <- as.data.frame(l, stringsAsFactors = FALSE)
+  rownames(dat) <- NULL
+  colnames(dat) <- var_names
+  class(dat) <- c("dna_documents", class(dat))
+  return(dat)
+}
+
+#' Print a \code{dna_documents} object
+#'
+#' Show details of a \code{dna_documents} object, with trimmed column widths.
+#'
+#' @param x A \code{dna_documents} object, as returned by the
+#'   \code{\link{dna_getDocuments}} function.
+#' @param trim Number of maximum characters to display per column. Contents with
+#'   more characters, such as titles and text, are truncated for more compact
+#'   display, and the last character is replaced by an asterisk (\code{*}).
+#' @param ... Additional arguments for the print function.
+#'
+#' @author Philip Leifeld
+#'
+#' @family documents
+#'
+#' @export
+print.dna_documents <- function(x, trim = 10, ...) {
+  print(data.frame(document_id = x$document_id,
+                   coder_id = x$coder_id,
+                   title = sapply(x$title, function(r) if (nchar(r) > trim) paste0(substr(r, 1, trim - 1), "*") else r),
+                   text = sapply(x$text, function(r) if (nchar(r) > trim) paste0(substr(r, 1, trim - 1), "*") else r),
+                   author = sapply(x$author, function(r) if (nchar(r) > trim) paste0(substr(r, 1, trim - 1), "*") else r),
+                   source = sapply(x$source, function(r) if (nchar(r) > trim) paste0(substr(r, 1, trim - 1), "*") else r),
+                   section = sapply(x$section, function(r) if (nchar(r) > trim) paste0(substr(r, 1, trim - 1), "*") else r),
+                   type = sapply(x$type, function(r) if (nchar(r) > trim) paste0(substr(r, 1, trim - 1), "*") else r),
+                   notes = sapply(x$notes, function(r) if (nchar(r) > trim) paste0(substr(r, 1, trim - 1), "*") else r),
+                   date_time = x$date_time,
+                   statements = x$statements,
+                   row.names = NULL), ...)
 }
