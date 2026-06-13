@@ -16,6 +16,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -983,6 +984,15 @@ public class DataExchange {
         return statementId;
 	}
 
+    /**
+     * Delete statements from the database.
+     *
+     * @param statementIds An array of statement IDs to delete.
+     */
+    static public void deleteStatements(int[] statementIds) {
+        Dna.sql.deleteStatements(statementIds);
+    }
+
 
 	/* =================================================================================================================
 	 * Functions for managing documents
@@ -993,7 +1003,7 @@ public class DataExchange {
      * Get a data frame with all documents with specific document IDs.
      *
      * @param documentIds An array of document IDs to retrieve. If this array is empty, all documents are retrieved.
-     * @return A data frame with the following columns: document_id, coder_id, title, text, author, source, section, type, notes, date_time, and statements.
+     * @return A data frame with the following columns: document_id, coder_id, title, text, author, source, section, type, notes, and date_time.
      */
     static public DataFrame getDocuments(int[] documentIds) {
 
@@ -1014,7 +1024,6 @@ public class DataExchange {
         ArrayList<Object> types = new ArrayList<>();
         ArrayList<Object> notes = new ArrayList<>();
         ArrayList<Object> dateTimes = new ArrayList<>();
-        ArrayList<Object> statementFrequencies = new ArrayList<>();
 
         for (Document d : documents) {
             ids.add(d.getId());
@@ -1027,7 +1036,6 @@ public class DataExchange {
             types.add(d.getType());
             notes.add(d.getNotes());
             dateTimes.add(d.getDateTime().toEpochSecond(ZoneOffset.UTC));
-            statementFrequencies.add(d.getStatements().size());
         }
 
         df.addColumn("document_id", "int", ids);
@@ -1040,8 +1048,48 @@ public class DataExchange {
         df.addColumn("type", "String", types);
         df.addColumn("notes", "String", notes);
         df.addColumn("date_time", "long", dateTimes);
-        df.addColumn("statements", "int", statementFrequencies);
 
         return df;
+    }
+
+    /**
+     * Add a new document to the database.
+     * 
+     * @param coderId    The ID of the coder that adds the documents.
+     * @param title      The document titles.
+	 * @param text		 The document texts.
+	 * @param author	 The document authors.
+	 * @param source	 The document sources.
+	 * @param section	 The document sections.
+	 * @param type		 The document types.
+	 * @param notes		 The document notes.
+	 * @param dateTime   The document dates as seconds since 1 January 1970.
+	 * @return			 New IDs of the documents that were added.
+     */
+    static public int[] addDocuments(int coderId, String[] title, String[] text, String[] author, String[] source, String[] section, String[] type, String[] notes, long[] dateTime) {
+        if (title.length != text.length || title.length != author.length || title.length != source.length || title.length != section.length || title.length != type.length || title.length != notes.length || title.length != dateTime.length) {
+			LogEvent l = new LogEvent(Logger.ERROR,
+					"Document arrays have different lengths.",
+					"The arrays for the document titles, texts, authors, sources, sections, types, notes, and dates must all have the same length. Please check the input parameters.");
+			Dna.logger.log(l);
+			return new int[0];
+		}
+
+		ArrayList<Document> documents = new ArrayList<Document>();
+		for (int i = 0; i < title.length; i++) {
+			documents.add(new Document(-1, coderId, title[i], text[i], author[i], source[i], section[i], type[i], notes[i], LocalDateTime.ofEpochSecond(dateTime[i], 0, ZoneOffset.UTC), new ArrayList<Statement>()));
+		}
+
+        int[] documentId = Dna.sql.addDocuments(documents);
+        return documentId;
+    }
+
+    /**
+     * Delete documents from the database.
+     *
+     * @param documentIds An array of document IDs to delete.
+     */
+    static public void deleteDocuments(int[] documentIds) {
+        Dna.sql.deleteDocuments(documentIds);
     }
 }

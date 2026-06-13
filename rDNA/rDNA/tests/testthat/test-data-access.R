@@ -76,6 +76,15 @@ test_that("statement management works", {
   expect_equal(st_new$agreement[st_new$ID == id], 1)
   expect_error(id <- dna_addStatement(documentID = doc_id, startCaret = 10, endCaret = 50, statementType = 1, coder = 2, organization = 25, concept = "some new concept", agreement = FALSE), "java.lang.ClassCastException")
 
+  # dna_deleteStatements
+  dna_deleteStatements(c(3:19, 21:60))
+  st_new <- dna_getStatements()
+  expect_equal(st_new$ID, c(1, 2, 20))
+
+  rm(st)
+  rm(st_new)
+  rm(doc_id)
+  rm(last_statement_id)
   dna_closeDatabase()
   unlink("sample.dna")
 })
@@ -183,15 +192,31 @@ test_that("document management works", {
 
   # dna_getDocuments with specified document IDs
   doc2 <- dna_getDocuments(documentIds = doc$document_id[c(1, nrow(doc))])
-  doc2
   expect_equal(nrow(doc2), 2)
-  expect_equal(ncol(doc2), 11)
+  expect_equal(ncol(doc2), 10)
 
   # print method for dna_getDocuments
   expect_output(print(doc), "2 109-876: \\* \\\\nTestimon\\* Bluestein\\*    109     876")
 
+  # dna_addDocuments
+  expect_equal(dna_addDocuments(1, "title", "new text", "author", "source", "section", "type", "notes", as.numeric(as.POSIXct("2026-06-13 18:30:00", tz = "UTC"))), 8)
+  expect_equal(dna_addDocuments(1, "another title", "new text", "author", "source", "section", "type", "notes", as.POSIXct("2026-06-13 18:45:00", tz = "UTC")), 9)
+  expect_error(dna_addDocuments(1, letters[1:6], letters[1:6], letters[1:6], letters[1:6], letters[1:6], letters[1:6], letters[1:6], rep(as.POSIXct("2026-06-13 18:45:00", tz = "UTC"))), "must all have the same length")
+  expect_equal(dna_addDocuments(1, letters[1:6], letters[1:6], letters[1:6], letters[1:6], letters[1:6], letters[1:6], letters[1:6], rep(as.POSIXct("2026-06-13 18:45:00", tz = "UTC"), 6)), 10:15)
+  doc3 <- dna_getDocuments()
+  expect_equal(nrow(doc3), 15)
+  expect_equal(doc3$date_time[15], as.POSIXct("2026-06-13 18:45:00", tz = "UTC"))
+  expect_equal(doc3$title[10:15], letters[1:6])
+
+  # dna_deleteDocuments
+  expect_no_error(dna_deleteDocuments(14))
+  expect_no_error(dna_deleteDocuments(1:11))
+  doc3 <- dna_getDocuments()
+  expect_equal(doc3$document_id, c(12, 13, 15))
+
   rm(doc)
   rm(doc2)
+  rm(doc3)
   dna_closeDatabase()
   unlink("sample.dna")
 })

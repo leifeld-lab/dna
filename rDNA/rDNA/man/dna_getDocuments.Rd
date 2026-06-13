@@ -41,6 +41,8 @@ documents
 }
 \seealso{
 Other documents: 
+\code{\link{dna_addDocuments}()},
+\code{\link{dna_deleteDocuments}()},
 \code{\link{print.dna_documents}()}
 }
 \author{

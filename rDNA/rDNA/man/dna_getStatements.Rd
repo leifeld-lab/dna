@@ -46,6 +46,7 @@ statements
 \seealso{
 Other statements: 
 \code{\link{dna_addStatement}()},
+\code{\link{dna_deleteStatements}()},
 \code{\link{print.dna_statements}()}
 }
 \author{

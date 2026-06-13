@@ -6,8 +6,10 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -24,6 +26,7 @@ import dna.export.*;
 import logger.LogEvent;
 import logger.Logger;
 import model.Coder;
+import model.Document;
 import model.Statement;
 import model.StatementType;
 import sql.ConnectionProfile;
@@ -1111,6 +1114,24 @@ public class HeadlessDna implements Logger.LogListener {
 		}
 	}
 
+	/**
+	 * Get the {@link Exporter} object that contains the results.
+	 *
+	 * @return {@link Exporter} object with results.
+	 */
+	public Exporter getExporter() {
+		return this.exporter;
+	}
+
+	@Override
+	public void processLogEvents() {
+		LogEvent l = Dna.logger.getRow(Dna.logger.getRowCount() - 1);
+		if (l.getPriority() == 2 || l.getPriority() == 3) {
+			l.print();
+		}
+	}
+
+
 	/* =================================================================================================================
 	 * Functions for managing variables
 	 * =================================================================================================================
@@ -1370,25 +1391,21 @@ public class HeadlessDna implements Logger.LogListener {
 		}
 		return statementId;
 	}
-	
+
 	/**
-	 * Get the {@link Exporter} object that contains the results.
+	 * Delete statements from the database.
 	 *
-	 * @return {@link Exporter} object with results.
+	 * @param statementIds  An array of statement IDs to be deleted.
 	 */
-	public Exporter getExporter() {
-		return this.exporter;
+	public void deleteStatements(int[] statementIds) {
+		sql.DataExchange.deleteStatements(statementIds);
+		LogEvent l = new LogEvent(Logger.MESSAGE,
+				"Statements have been deleted.",
+				"The statements with IDs " + Arrays.toString(statementIds) + " have been successfully deleted from the database.");
+		Dna.logger.log(l);
 	}
 
-	@Override
-	public void processLogEvents() {
-		LogEvent l = Dna.logger.getRow(Dna.logger.getRowCount() - 1);
-		if (l.getPriority() == 2 || l.getPriority() == 3) {
-			l.print();
-		}
-	}
-
-
+	
 	/* =================================================================================================================
 	 * Functions for managing documents
 	 * =================================================================================================================
@@ -1415,5 +1432,59 @@ public class HeadlessDna implements Logger.LogListener {
 			Dna.logger.log(l);
 		}
 		return df;
+	}
+
+	/**
+	 * Add a new document to the database.
+	 * 
+	 * @param coderId    The coder ID.
+	 * @param title		 The document titles.
+	 * @param text		 The document texts.
+	 * @param author	 The document authors.
+	 * @param source	 The document sources.
+	 * @param section	 The document sections.
+	 * @param type		 The document types.
+	 * @param notes		 The document notes.
+	 * @param dateTime   The document dates.
+	 * @return			 New IDs of the documents that were added.
+	 */
+	public int[] addDocuments(int coderId, String[] title, String[] text, String[] author, String[] source, String[] section, String[] type, String[] notes, double[] dateTime) {
+		if (title.length != text.length || title.length != author.length || title.length != source.length || title.length != section.length || title.length != type.length || title.length != notes.length || title.length != dateTime.length) {
+			LogEvent l = new LogEvent(Logger.ERROR,
+					"Document arrays have different lengths.",
+					"The arrays for the document titles, texts, authors, sources, sections, types, notes, and dates must all have the same length. Please check the input parameters.");
+			Dna.logger.log(l);
+			return new int[0];
+		}
+		long[] dateTimeLong = new long[dateTime.length];
+		for (int i = 0; i < dateTime.length; i++) {
+			dateTimeLong[i] = (long) dateTime[i];
+		}
+		int[] documentIds = sql.DataExchange.addDocuments(coderId, title, text, author, source, section, type, notes, dateTimeLong);
+		if (documentIds.length == 0) {
+			LogEvent l = new LogEvent(Logger.ERROR,
+					"Documents could not be added.",
+					"The new documents could not be added to the database. Please check the provided parameters and the database connection.");
+			Dna.logger.log(l);
+		} else {
+			LogEvent l = new LogEvent(Logger.MESSAGE,
+					"Documents have been added.",
+					"The new documents with IDs " + Arrays.toString(documentIds) + " have been successfully added to the database.");
+			Dna.logger.log(l);
+		}
+		return documentIds;
+	}
+
+	/**
+	 * Delete documents from the database.
+	 *
+	 * @param documentIds  An array of document IDs to be deleted.
+	 */
+	public void deleteDocuments(int[] documentIds) {
+		sql.DataExchange.deleteDocuments(documentIds);
+		LogEvent l = new LogEvent(Logger.MESSAGE,
+				"Documents have been deleted.",
+				"The documents with IDs " + Arrays.toString(documentIds) + " have been successfully deleted from the database.");
+		Dna.logger.log(l);
 	}
 }

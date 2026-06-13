@@ -21,6 +21,8 @@ Show details of a \code{dna_documents} object, with trimmed column widths.
 }
 \seealso{
 Other documents: 
+\code{\link{dna_addDocuments}()},
+\code{\link{dna_deleteDocuments}()},
 \code{\link{dna_getDocuments}()}
 }
 \author{

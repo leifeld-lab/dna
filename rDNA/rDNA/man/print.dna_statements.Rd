@@ -23,6 +23,7 @@ Show details of a \code{dna_statements} object, with trimmed column widths.
 \seealso{
 Other statements: 
 \code{\link{dna_addStatement}()},
+\code{\link{dna_deleteStatements}()},
 \code{\link{dna_getStatements}()}
 }
 \author{

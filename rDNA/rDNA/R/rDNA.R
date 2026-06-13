@@ -1123,7 +1123,7 @@ dna_addStatement <- function(documentID,
     if (is.numeric(coder)) {
       coder <- as.integer(coder)
     } else {
-      stop("The coder must be provided as a numeric object (see dna_getCoders).")
+      stop("The coder must be provided as a numeric object (see dna_queryCoders).")
     }
   }
   ellipsis <- list(...)
@@ -1175,6 +1175,33 @@ dna_addStatement <- function(documentID,
                varNames,
                values)
   return(id)
+}
+
+#' Delete statement(s)
+#'
+#' Delete statement(s) from the DNA database.
+#'
+#' The \code{dna_deleteStatements} function removes one or more statements with
+#' a given vector of statement IDs from the database.
+#'
+#' @param statement_id A vector of statement IDs (can be a single ID).
+#'
+#' @author Philip Leifeld
+#'
+#' @family statements
+#'
+#' @importFrom rJava .jarray .jcall
+#' @export
+dna_deleteStatements <- function(statement_id) {
+  if (!is.numeric(statement_id)) {
+    stop("Statement IDs must be supplied as integer values (possibly of length 1 to delete a single statement).")
+  } else {
+    statement_id <- .jarray(sapply(statement_id, as.integer))
+  }
+  .jcall(dna_api(),
+         "V",
+         "deleteStatements",
+         statement_id)
 }
 
 #' Print a \code{dna_statements} object
@@ -1296,6 +1323,159 @@ dna_getDocuments <- function(documentIds = integer()) {
   return(dat)
 }
 
+#' Add one or more documents to the DNA database
+#'
+#' Add one or more documents to the DNA database.
+#'
+#' The \code{dna_addDocuments} function can add new documents to an existing
+#' DNA database. The user supplies a single coder ID for the coder to whom the
+#' new documents should belong and several equally long vectors of information
+#' for the titles, texts, authors, dates/times, etc. of the new documents. To
+#' add a single document, these vectors can have length 1. The dates/times must
+#' be provided as a vector of POSIXct objects or a vector of numeric objects
+#' indicating epoch seconds since 1 January 1970 UTC. After adding the documents
+#' to the database, the function returns the generated document IDs.
+#'
+#' @param coder_id An integer value indicating which coder creates the document.
+#' @param title The title(s) of the new document(s).
+#' @param text The text(s) of the new document(s).
+#' @param author The author(s) of the new document(s).
+#' @param source The source(s) of the new document(s).
+#' @param section The section(s) of the new document(s).
+#' @param type The type(s) of the new document(s).
+#' @param notes The notes of the new document(s).
+#' @param date_time The date(s)/time(s) of the new document(s). Provided as a
+#'   vector (potentially of length 1 if only one document is added) of either
+#'   numeric objects or POSIXct objects. POSIXct objects naturally store full
+#'   date/time information. Numeric objects expect date/time to be indicated as
+#'   epoch seconds since 1 January 1970 UTC.
+#' @return The document ID(s) of the newly created document(s) in the database.
+#'
+#' @author Philip Leifeld
+#'
+#' @family documents
+#' @importFrom rJava .jlong
+#' @importFrom rJava .jarray
+#' @importFrom rJava .jcall
+#' @export
+dna_addDocuments <- function(coder_id = 1,
+                             title = "",
+                             text = "",
+                             author = "",
+                             source = "",
+                             section = "",
+                             type = "",
+                             notes = "",
+                             date_time = Sys.time()
+                             ) {
+  if (!is.integer(coder_id)) {
+    if (is.numeric(coder_id)) {
+      coder_id <- as.integer(coder_id)
+    } else {
+      stop("'coder_id' must be an integer numeric value specifying the ID of the coder of the document(s). You can find coder IDs with the dna_queryCoders() function.")
+    }
+  }
+
+  if (length(coder_id) > 1) {
+    stop("'coder_id' must be a single ID value, not multiple values. The same coder ID is used for all document you add.")
+  }
+
+  if (length(title) != length(text) | length(title) != length(author) | length(title) != length(source) | length(title) != length(section) | length(title) != length(type) | length(title) != length(notes) | length(title) != length(date_time)) {
+    stop("The variables for the document titles, texts, authors, sources, sections, types, notes, and dates must all have the same length. Please check the input parameters.")
+  }
+
+  if (!is.character(title)) {
+    stop("The title(s) must be provided as a character vector of length 1 or more.")
+  } else {
+    title <- .jarray(title)
+  }
+
+  if (!is.character(text)) {
+    stop("The text(s) must be provided as a character vector of length 1 or more.")
+  } else {
+    text <- .jarray(text)
+  }
+
+  if (!is.character(author)) {
+    stop("The author(s) must be provided as a character vector of length 1 or more.")
+  } else {
+    author <- .jarray(author)
+  }
+
+  if (!is.character(source)) {
+    stop("The source(s) must be provided as a character vector of length 1 or more.")
+  } else {
+    source <- .jarray(source)
+  }
+
+  if (!is.character(section)) {
+    stop("The section(s) must be provided as a character vector of length 1 or more.")
+  } else {
+    section <- .jarray(section)
+  }
+
+  if (!is.character(type)) {
+    stop("The type(s) must be provided as a character vector of length 1 or more.")
+  } else {
+    type <- .jarray(type)
+  }
+
+  if (!is.character(notes)) {
+    stop("The notes must be provided as a character vector of length 1 or more.")
+  } else {
+    notes <- .jarray(notes)
+  }
+
+  if ("POSIXct" %in% class(date_time)) {
+    date_time <- .jarray(as.numeric(date_time))
+  } else if (is.numeric(date_time)) {
+    date_time <- .jarray(date_time)
+  } else {
+    stop("The date(s)/time(s) must be provided as either a POSIXct vector of length 1 or more or a numeric (epoch seconds sind 1 Jan 1970 UTC) vector with double precision of length 1 or more.")
+  }
+
+  id <- .jcall(dna_api(),
+               "[I",
+               "addDocuments",
+               coder_id,
+               title,
+               text,
+               author,
+               source,
+               section,
+               type,
+               notes,
+               date_time)
+  return(id)
+}
+
+#' Delete document(s)
+#'
+#' Delete document(s) from the DNA database.
+#'
+#' The \code{dna_deleteDocuments} function removes one or more documents with a
+#' given vector of document IDs from the database.
+#'
+#' @param document_id A vector of document IDs (can be a single ID).
+#'
+#' @author Philip Leifeld
+#'
+#' @family documents
+#'
+#' @importFrom rJava .jarray .jcall
+#' @export
+dna_deleteDocuments <- function(document_id) {
+  if (!is.numeric(document_id)) {
+    stop("Document IDs must be supplied as integer values (possibly of length 1 to delete a single document).")
+  } else {
+    document_id <- .jarray(sapply(document_id, as.integer))
+  }
+  .jcall(dna_api(),
+         "V",
+         "deleteDocuments",
+         document_id)
+}
+
 #' Print a \code{dna_documents} object
 #'
 #' Show details of a \code{dna_documents} object, with trimmed column widths.
@@ -1323,6 +1503,5 @@ print.dna_documents <- function(x, trim = 10, ...) {
                    type = sapply(x$type, function(r) if (nchar(r) > trim) paste0(substr(r, 1, trim - 1), "*") else r),
                    notes = sapply(x$notes, function(r) if (nchar(r) > trim) paste0(substr(r, 1, trim - 1), "*") else r),
                    date_time = x$date_time,
-                   statements = x$statements,
                    row.names = NULL), ...)
 }

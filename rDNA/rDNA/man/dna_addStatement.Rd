@@ -55,6 +55,7 @@ automatically generated and returned.
 }
 \seealso{
 Other statements: 
+\code{\link{dna_deleteStatements}()},
 \code{\link{dna_getStatements}()},
 \code{\link{print.dna_statements}()}
 }
