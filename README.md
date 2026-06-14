@@ -4,7 +4,7 @@
 
 The Java software Discourse Network Analyzer (DNA) is a qualitative content analysis tool with network export facilities. You import text files and annotate statements that persons or organizations make, and the program will return network matrices of actors connected by shared concepts.
 
-- Download the latest [release](https://github.com/leifeld/dna/releases) of the software.
+- Download the latest [release](https://github.com/leifeld-lab/dna/releases) of the software.
 
 - Annotate documents, such as newspaper articles or speeches, with statements of what actors say; then export network data.
 
@@ -12,12 +12,12 @@ The Java software Discourse Network Analyzer (DNA) is a qualitative content anal
 
 - The software comes with an R package called rDNA for remote controlling DNA and for further ways of analyzing the networks.
 
-[![build-check-test](https://github.com/leifeld/dna/actions/workflows/build-check-test.yml/badge.svg)](https://github.com/leifeld/dna/actions/workflows/build-check-test.yml)
+[![build-check-test](https://github.com/leifeld-lab/dna/actions/workflows/build-check-test.yml/badge.svg)](https://github.com/leifeld/dna/actions/workflows/build-check-test.yml)
 
 ## Installation of DNA
 
 ### Starting DNA
-To use DNA, simply download the latest `.jar` file under "[Releases](https://github.com/leifeld/dna/releases)" on the right along with the `sample.dna` file, a toy database you can load in DNA (password: `sample`) to play with the software. You can double-click on the `.jar` file to open DNA. No installation is required.
+To use DNA, simply download the latest `.jar` file under "[Releases](https://github.com/leifeld-lab/dna/releases)" on the right along with the `sample.dna` file, a toy database you can load in DNA (password: `sample`) to play with the software. You can double-click on the `.jar` file to open DNA. No installation is required.
 
 If your system does not want to start DNA with a double-click on the `.jar` file, you can also open it from the terminal. To do so, navigate to the directory where the `.jar` file is stored on your computer using the `cd` command, for example `cd ~/Documents/`. Once there, type in something like this, with the `.jar` file corresponding to the file version you downloaded:
 
@@ -41,12 +41,12 @@ MacOS users may need to give the program authorization to be executed by opening
 
 Some MacOS users reported issues with opening files. These issues should have been fixed in version 3.0.11.
 
-You can also browse the [issue tracker](https://github.com/leifeld/issues) (including closed issues) and the [commit messages](https://github.com/leifeld/dna/commits/master/) for more information on MacOS issues. Get in touch via the issue tracker or Matrix (infos below) if you are unable to solve these issues.
+You can also browse the [issue tracker](https://github.com/leifeld-lab/issues) (including closed issues) and the [commit messages](https://github.com/leifeld-lab/dna/commits/master/) for more information on MacOS issues. Get in touch via the issue tracker or Matrix (infos below) if you are unable to solve these issues.
 
 ### Compiling from source using Gradle
 If you require the latest (non-release) version of the DNA jar file from GitHub, you can clone the git repository to your computer and execute `./gradlew build` on your terminal or command line. This will build the jar file, the rDNA R package, and the bibliography, and store them in the `build/` directory of the cloned repository. If you only want to build the jar file, you can also execute `./gradlew :dna:build` (omit `./` on Windows).
 
-Alternatively, if you need the latest non-release version, you can try to download the latest artifact from the build process under [GitHub Actions](https://github.com/leifeld/dna/actions) by clicking on the latest build and scrolling down to "Artifacts". (You may need to be logged in to GitHub to access artifacts.) However, it is usually recommended to use the most recent [release](https://github.com/leifeld/dna/releases/) version.
+Alternatively, if you need the latest non-release version, you can try to download the latest artifact from the build process under [GitHub Actions](https://github.com/leifeld-lab/dna/actions) by clicking on the latest build and scrolling down to "Artifacts". (You may need to be logged in to GitHub to access artifacts.) However, it is usually recommended to use the most recent [release](https://github.com/leifeld-lab/dna/releases/) version.
 
 ## rDNA: Connecting DNA to R
 
