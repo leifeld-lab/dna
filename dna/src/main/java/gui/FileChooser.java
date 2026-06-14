@@ -131,6 +131,8 @@ public class FileChooser {
                     this.f = new File[] { fc.getSelectedFile() };
                 }
                 Dna.workingDirectory = fc.getCurrentDirectory();
+            } else {
+                this.f = new File[0];
             }
         }
         for (int i = 0; i < this.f.length; i++) {

@@ -9,6 +9,7 @@ import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.event.*;
 import java.awt.geom.Rectangle2D;
+import java.awt.image.BaseMultiResolutionImage;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -137,14 +138,8 @@ public class MainWindow extends JFrame {
 		this.setTitle("Discourse Network Analyzer");
 		this.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 		
-		List<Image> dnaIcons = new ArrayList<Image>();
-		dnaIcons.add(new ImageIcon(getClass().getResource("/icons/dna512.png")).getImage());
-		dnaIcons.add(new ImageIcon(getClass().getResource("/icons/dna256.png")).getImage());
-		dnaIcons.add(new ImageIcon(getClass().getResource("/icons/dna128.png")).getImage());
-		dnaIcons.add(new ImageIcon(getClass().getResource("/icons/dna64.png")).getImage());
-		dnaIcons.add(new ImageIcon(getClass().getResource("/icons/dna32.png")).getImage());
-		dnaIcons.add(new ImageIcon(getClass().getResource("/icons/dna16.png")).getImage());
-		this.setIconImages(dnaIcons);
+		BaseMultiResolutionImage dnaIcon = new SvgIcon("/icons/dna.svg", 32).getImage();
+		this.setIconImage(dnaIcon);
 		
 		// close SQL connection before exit
 		this.addWindowListener(new WindowAdapter() {
@@ -181,7 +176,7 @@ public class MainWindow extends JFrame {
 		actionSaveProfile = new ActionSaveProfile("Save connection profile", saveProfileIcon, "Save a connection profile, which acts as a bookmark to a database", KeyEvent.VK_S);
 		actionSaveProfile.setEnabled(false);
 
-		ImageIcon regexEditorIcon = new ImageIcon(new ImageIcon(getClass().getResource("/icons/tabler-icon-prescription.png")).getImage().getScaledInstance(18, 18, Image.SCALE_SMOOTH));
+        ImageIcon regexEditorIcon = new SvgIcon("/icons/google_regular_expression.svg", 18).getImageIcon();
 		actionRegexEditor = new ActionRegexEditor("Open regex editor", regexEditorIcon, "Open the regular expression editor to add or delete regex search terms for in-text highlighting", KeyEvent.VK_R);
 		actionRegexEditor.setEnabled(false);
 		
@@ -230,7 +225,7 @@ public class MainWindow extends JFrame {
 		actionRemoveStatements = new ActionRemoveStatements("Remove statement(s)", removeStatementsIcon, "Remove the statement(s) currently selected in the statement table", KeyEvent.VK_D);
 		actionRemoveStatements.setEnabled(false);
 
-		ImageIcon statementTypeEditorIcon = new ImageIcon(new ImageIcon(getClass().getResource("/icons/tabler-icon-message-2.png")).getImage().getScaledInstance(18, 18, Image.SCALE_SMOOTH));
+		ImageIcon statementTypeEditorIcon = new SvgIcon("/icons/tabler_message_2.svg", 18).getImageIcon();
 		actionStatementTypeEditor = new ActionStatementTypeEditor("Edit statement types", statementTypeEditorIcon, "Open the statement type editor to edit statement types and their variables.", KeyEvent.VK_T);
 		actionStatementTypeEditor.setEnabled(false);
 
@@ -253,7 +248,7 @@ public class MainWindow extends JFrame {
 		ImageIcon loggerIcon = new ImageIcon(new ImageIcon(getClass().getResource("/icons/tabler-icon-bug.png")).getImage().getScaledInstance(18, 18, Image.SCALE_SMOOTH));
 		actionLoggerDialog = new ActionLoggerDialog("Display message log", loggerIcon, "Display a log of messages, warnings, and errors in a dialog window", KeyEvent.VK_L);
 		
-		ImageIcon aboutIcon = new ImageIcon(new ImageIcon(getClass().getResource("/icons/dna32.png")).getImage().getScaledInstance(18, 18, Image.SCALE_SMOOTH));
+		ImageIcon aboutIcon = new SvgIcon("/icons/dna.svg", 18).getImageIcon();
 		actionAboutWindow = new ActionAboutWindow("About DNA", aboutIcon, "Display information about DNA", KeyEvent.VK_B);
 
 		// define models
@@ -1535,38 +1530,38 @@ public class MainWindow extends JFrame {
 		public void actionPerformed(ActionEvent e) {
 			NewDatabaseDialog n = new NewDatabaseDialog(MainWindow.this, true);
 			ConnectionProfile cp = n.getConnectionProfile();
-			String version = new Sql(cp, false).getVersion();
-			if (!version.startsWith("3.0")) {
-				LogEvent le = new LogEvent(Logger.ERROR,
-						"[GUI] Tried to open an incompatible database version.",
-						"You tried to open a DNA database with version " + version + ", but you can only open databases with version 3.0. Data from version 2 databases can also be imported into a new or existing DNA 3 database using the importer in the Documents menu.");
+			if (cp == null) {
+				LogEvent le = new LogEvent(Logger.MESSAGE,
+						"[GUI] Action executed: could not open database.",
+						"Started opening a database connection from the GUI, but the connection was not established. Potentially canceled database selection.");
 				Dna.logger.log(le);
-			} else if (cp != null) {
-				Dna.sql.setConnectionProfile(cp, false);
-				refreshDocumentTable();
-				refreshStatementTable(new int[0]);
-				adjustToCoderSelection();
-				
-				// changes in other classes
-				statusBar.updateUrl();
-				toolbar.adjustToChangedConnection();
-				textPanel.setContents(-1, "");
-				statementPanel.adjustToChangedConnection();
-				menuBar.adjustToChangedCoder();
-				coderSelectionPanel.changeCoderBadge();
-
-				if (cp == null) {
-					LogEvent l = new LogEvent(Logger.MESSAGE,
-							"[GUI] Action executed: could not open database.",
-							"Started opening a database connection from the GUI, but the connection was not established.");
-					Dna.logger.log(l);
+			} else {
+				String version = new Sql(cp, false).getVersion();
+				if (!version.startsWith("3.0")) {
+					LogEvent le = new LogEvent(Logger.ERROR,
+							"[GUI] Tried to open an incompatible database version.",
+							"You tried to open a DNA database with version " + version + ", but you can only open databases with version 3.0. Data from version 2 databases can also be imported into a new or existing DNA 3 database using the importer in the Documents menu.");
+					Dna.logger.log(le);
 				} else {
-					Dna.sql.setConnectionProfile(cp, false); // not a connection test, so false
-					LogEvent l = new LogEvent(Logger.MESSAGE,
-							"[GUI] Action executed: opened database.",
-							"Opened a database connection from the GUI.");
-					Dna.logger.log(l);
+					Dna.sql.setConnectionProfile(cp, false);
+					refreshDocumentTable();
+					refreshStatementTable(new int[0]);
+					adjustToCoderSelection();
+
+					// changes in other classes
+					statusBar.updateUrl();
+					toolbar.adjustToChangedConnection();
+					textPanel.setContents(-1, "");
+					statementPanel.adjustToChangedConnection();
+					menuBar.adjustToChangedCoder();
+					coderSelectionPanel.changeCoderBadge();
 				}
+
+				Dna.sql.setConnectionProfile(cp, false); // not a connection test, so false
+				LogEvent l = new LogEvent(Logger.MESSAGE,
+						"[GUI] Action executed: opened database.",
+						"Opened a database connection from the GUI.");
+				Dna.logger.log(l);
 			}
 		}
 	}

@@ -4337,6 +4337,33 @@ public class Sql {
 	}
 	
 	/**
+	 * Delete multiple regex terms from database.
+	 *
+	 * @param labels The regex terms to delete.
+	 * @return True if successfully deleted, false otherwise.
+	 */
+	public boolean deleteRegexes(ArrayList<String> labels) {
+		try (Connection conn = getDataSource().getConnection();
+			 PreparedStatement s = conn.prepareStatement("DELETE FROM REGEXES WHERE Label = ?;");
+			 SQLCloseable finish = conn::rollback) {
+			conn.setAutoCommit(false);
+			for (int i = 0; i < labels.size(); i++) {
+				s.setString(1, labels.get(i));
+				s.executeUpdate();
+			}
+			conn.commit();
+			return true;
+		} catch (SQLException e) {
+			LogEvent le = new LogEvent(Logger.ERROR,
+					"[SQL] Could not delete regex terms from the database.",
+					"Tried to delete regex terms from the database, but there was a problem.",
+					e);
+			Dna.logger.log(le);
+			return false;
+		}
+	}
+
+	/**
 	 * Query the database for the version saved in the SETTINGS table.
 	 * 
 	 * @return The DNA version the database was created with.

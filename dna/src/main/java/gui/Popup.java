@@ -8,7 +8,6 @@ import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
-import java.awt.Image;
 import java.awt.Insets;
 import java.awt.Point;
 import java.awt.event.FocusEvent;
@@ -102,7 +101,7 @@ class Popup extends JDialog {
 		this.setAlwaysOnTop(true);
 		this.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 		
-		ImageIcon statementIcon = new ImageIcon(getClass().getResource("/icons/tabler-icon-message-2.png"));
+		ImageIcon statementIcon = new SvgIcon("/icons/tabler_message_2.svg", 32).getImageIcon();
 		this.setIconImage(statementIcon.getImage());
 		
 		c = getContentPane();
@@ -140,7 +139,7 @@ class Popup extends JDialog {
 		colorPanel.setBackground(color.toAWTColor());
 		colorPanel.setPreferredSize(new Dimension(4, 4));
 		
-		ImageIcon duplicateIcon = new ImageIcon(new ImageIcon(getClass().getResource("/icons/tabler-icon-copy.png")).getImage().getScaledInstance(h, h, Image.SCALE_SMOOTH));
+		ImageIcon duplicateIcon = new SvgIcon("/icons/tabler_copy.svg", h).getImageIcon();
 		duplicate = new JButton(duplicateIcon);
 		duplicate.setToolTipText("create a copy of this statement at the same location");
 		duplicate.setPreferredSize(new Dimension(h, h));
@@ -148,7 +147,7 @@ class Popup extends JDialog {
 			duplicate.setEnabled(false);
 		}
 		
-		ImageIcon removeIcon = new ImageIcon(new ImageIcon(getClass().getResource("/icons/tabler-icon-trash.png")).getImage().getScaledInstance(h, h, Image.SCALE_SMOOTH));
+		ImageIcon removeIcon = new SvgIcon("/icons/tabler_trash.svg", h).getImageIcon();
 		remove = new JButton(removeIcon);
 		remove.setToolTipText("completely remove the whole statement (but keep the text)");
 		remove.setPreferredSize(new Dimension(h, h));
@@ -383,11 +382,11 @@ class Popup extends JDialog {
 		// add buttons if window decoration is true
 		if (windowDecoration == true) {
 			JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
-			ImageIcon cancelIcon = new ImageIcon(new ImageIcon(getClass().getResource("/icons/tabler-icon-x.png")).getImage().getScaledInstance(18, 18, Image.SCALE_SMOOTH));
+			ImageIcon cancelIcon = new SvgIcon("/icons/google_device_reset.svg", h).getImageIcon();
 			cancelButton = new JButton("Cancel", cancelIcon);
 			cancelButton.setToolTipText("close this window without making any changes");
 			buttonPanel.add(cancelButton);
-			ImageIcon saveIcon = new ImageIcon(new ImageIcon(getClass().getResource("/icons/tabler-icon-check.png")).getImage().getScaledInstance(18, 18, Image.SCALE_SMOOTH));
+			ImageIcon saveIcon = new SvgIcon("/icons/google_round_save_black_48dp.svg", h).getImageIcon();
 			saveButton = new JButton("Save", saveIcon);
 			saveButton.setToolTipText("save each variable into the database and close this window");
 			buttonPanel.add(saveButton);

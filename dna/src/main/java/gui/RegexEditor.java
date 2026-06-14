@@ -4,6 +4,7 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.GridLayout;
 import java.awt.Image;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -39,8 +40,7 @@ import model.Regex;
 
 class RegexEditor extends JDialog {
 	private static final long serialVersionUID = -1587444508551756607L;
-	private JButton addButton;
-	private JButton remove;
+	private JButton addButton, removeButton;
 	private JXTextField textField;
 	private RegexListModel regexListModel;
 	private JList<Regex> regexList;
@@ -49,7 +49,7 @@ class RegexEditor extends JDialog {
 	public RegexEditor() {
 		this.setModal(true);
 		this.setTitle("Regex editor");
-		ImageIcon regexEditorIcon = new ImageIcon(getClass().getResource("/icons/tabler-icon-prescription.png"));
+        ImageIcon regexEditorIcon = new SvgIcon("/icons/google_regular_expression.svg", 32).getImageIcon();
 		this.setIconImage(regexEditorIcon.getImage());
 
 		this.changed = false;
@@ -61,7 +61,7 @@ class RegexEditor extends JDialog {
 		// list
 		regexListModel = new RegexListModel();
 		regexList = new JList<Regex>(regexListModel);
-		regexList.setSelectionMode(ListSelectionModel.SINGLE_INTERVAL_SELECTION);
+		regexList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 		regexList.setLayoutOrientation(JList.VERTICAL);
 		regexList.setVisibleRowCount(20);
 		regexList.setCellRenderer(new RegexListRenderer());
@@ -70,9 +70,9 @@ class RegexEditor extends JDialog {
 			public void valueChanged(ListSelectionEvent e) {
 				if (regexList.getModel().getSize() == 0 || regexList.isSelectionEmpty() 
 						|| !Dna.sql.getActiveCoder().isPermissionEditRegex()) {
-					remove.setEnabled(false);
+					removeButton.setEnabled(false);
 				} else {
-					remove.setEnabled(true);
+					removeButton.setEnabled(true);
 				}
 			}
 		});
@@ -129,11 +129,11 @@ class RegexEditor extends JDialog {
 				if (duplicate == true) {
 					addButton.setEnabled(false);
 					if (!s.equals("")) {
-						remove.setEnabled(true);
+						removeButton.setEnabled(true);
 					}
 				} else {
 					addButton.setEnabled(true);
-					remove.setEnabled(false);
+					removeButton.setEnabled(false);
 				}
 			}
 		});
@@ -150,12 +150,12 @@ class RegexEditor extends JDialog {
 		entryPanel.add(textField, BorderLayout.CENTER);
 		colorButton.setPreferredSize(new Dimension(colorButton.getPreferredSize().width, textField.getPreferredSize().height));
 		
-		// button panel: add button
-		JPanel buttonPanel = new JPanel();
+        // button panel: add button
+        JPanel buttonPanel = new JPanel();
 		buttonPanel.setBorder(new EmptyBorder(0, 5, 0, 5)); // border left and right
-		ImageIcon addIcon = new ImageIcon(new ImageIcon(getClass().getResource("/icons/tabler-icon-check.png")).getImage().getScaledInstance(18, 18, Image.SCALE_SMOOTH));
-		addButton = new JButton("Add", addIcon);
-		addButton.setEnabled(false);
+        ImageIcon addIcon = new SvgIcon("/icons/tabler_plus.svg", 16).getImageIcon();
+        addButton = new JButton("Add", addIcon);
+        addButton.setEnabled(false);
 		addButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				model.Color cl = colorButton.getColor();
@@ -173,13 +173,13 @@ class RegexEditor extends JDialog {
 				}
 			}
 		});
-		buttonPanel.add(addButton);
-		
-		// button panel: remove button
-		ImageIcon removeIcon = new ImageIcon(new ImageIcon(getClass().getResource("/icons/tabler-icon-trash.png")).getImage().getScaledInstance(18, 18, Image.SCALE_SMOOTH));
-		remove = new JButton("Remove", removeIcon);
-		remove.setEnabled(false);
-		remove.addActionListener(new ActionListener() {
+        buttonPanel.add(addButton);
+
+        // button panel: remove button
+        ImageIcon removeIcon = new SvgIcon("/icons/tabler_minus.svg", 16).getImageIcon();
+        removeButton = new JButton("Remove", removeIcon);
+        removeButton.setEnabled(false);
+		removeButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				String label = regexList.getSelectedValue().getLabel();
 				boolean deleted = Dna.sql.deleteRegex(label);
@@ -193,7 +193,7 @@ class RegexEditor extends JDialog {
 				}
 			}
 		});
-		buttonPanel.add(remove);
+        buttonPanel.add(removeButton);
 
 		// button panel: close button
 		ImageIcon closeIcon = new ImageIcon(new ImageIcon(getClass().getResource("/icons/tabler-icon-x.png")).getImage().getScaledInstance(18, 18, Image.SCALE_SMOOTH));

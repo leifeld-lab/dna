@@ -477,6 +477,11 @@ class StatementPanel extends JPanel {
 			radioButtonPanel.add(allButton);
 			radioButtonPanel.add(docButton);
 			radioButtonPanel.add(filterButton);
+			JPanel filterButtonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+			ImageIcon filterIcon = new SvgIcon("/icons/tabler_filter_plus.svg", 16).getImageIcon();
+			JLabel filterLabel = new JLabel(filterIcon);
+			filterButtonPanel.add(filterLabel);
+			filterButtonPanel.add(radioButtonPanel);
 			
 			// react to changes in the selected statement type and rebuild the panel with the filter fields
 			ItemListener aListener = new ItemListener() {
@@ -598,7 +603,7 @@ class StatementPanel extends JPanel {
 			allButton.addActionListener(al);
 			docButton.addActionListener(al);
 			filterButton.addActionListener(al);
-			this.add(radioButtonPanel, BorderLayout.NORTH);
+			this.add(filterButtonPanel, BorderLayout.NORTH);
 			
 			// statement type combo box panel is empty for now
 			statementTypePanel = new JPanel(new BorderLayout());

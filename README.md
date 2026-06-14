@@ -1,4 +1,4 @@
-![](./dna/src/main/resources/icons/dna128.png)
+![](./dna/src/main/resources/icons/dna_horizontal.svg)
 
 ## Discourse Network Analyzer (DNA)
 
@@ -12,8 +12,6 @@ The Java software Discourse Network Analyzer (DNA) is a qualitative content anal
 
 - The software comes with an R package called rDNA for remote controlling DNA and for further ways of analyzing the networks.
 
-[DNA 3.0](https://github.com/leifeld/dna/releases) was first released on 12 June 2022. It constitutes a major rewrite from the previous version DNA 2.0 beta 25. DNA 3 comes with many new features and improvements. The [release](https://github.com/leifeld/dna/releases) page contains all the details (scroll to version 3.0.7 for the first DNA 3 release).
-
 [![build-check-test](https://github.com/leifeld/dna/actions/workflows/build-check-test.yml/badge.svg)](https://github.com/leifeld/dna/actions/workflows/build-check-test.yml)
 
 ## Installation of DNA
@@ -24,7 +22,7 @@ To use DNA, simply download the latest `.jar` file under "[Releases](https://git
 If your system does not want to start DNA with a double-click on the `.jar` file, you can also open it from the terminal. To do so, navigate to the directory where the `.jar` file is stored on your computer using the `cd` command, for example `cd ~/Documents/`. Once there, type in something like this, with the `.jar` file corresponding to the file version you downloaded:
 
 ``` shell
-java -jar dna-3.0.11.jar
+java -jar dna-3.1.0.jar
 ```
 
 Along with DNA, it is recommended to download [visone](https://visone.ethz.ch/), which can be opened in the same way as DNA. You can open `.graphml` files from DNA's network export in visone.
@@ -48,23 +46,25 @@ You can also browse the [issue tracker](https://github.com/leifeld/issues) (incl
 ### Compiling from source using Gradle
 If you require the latest (non-release) version of the DNA jar file from GitHub, you can clone the git repository to your computer and execute `./gradlew build` on your terminal or command line. This will build the jar file, the rDNA R package, and the bibliography, and store them in the `build/` directory of the cloned repository. If you only want to build the jar file, you can also execute `./gradlew :dna:build` (omit `./` on Windows).
 
-Alternatively, if you need the latest non-release version, you can try to download the latest artifact from the build process under [GitHub Actions](https://github.com/leifeld/dna/actions) by clicking on the latest build and scrolling down to "Artifacts". However, it is usually recommended to use the most recent [release](https://github.com/leifeld/dna/releases/) version.
+Alternatively, if you need the latest non-release version, you can try to download the latest artifact from the build process under [GitHub Actions](https://github.com/leifeld/dna/actions) by clicking on the latest build and scrolling down to "Artifacts". (You may need to be logged in to GitHub to access artifacts.) However, it is usually recommended to use the most recent [release](https://github.com/leifeld/dna/releases/) version.
 
-## rDNA 3.0: Connecting DNA to R
+## rDNA: Connecting DNA to R
 
 The R package rDNA connects DNA to R for data exchange and analysis.
 
 rDNA offers functionality such as:
 - plotting networks with different layouts,
+- batch-adding, deleting, and retrieving documents, statements, and attributes,
 - applying many kinds of cluster analysis/community detection/subgroup analysis and selecting the best solution automatically to identify coalitions,
-- detection of phase transitions,
-- partitioning of concepts into backbones and redundant sets,
-- ideological scaling via item response theory,
-- barplots etc.
+- detection of phase transitions ([Vandenhole et al., 2025](https://doi.org/10.1016/j.erss.2025.104020); [Leifeld and Garic, 2026](https://doi.org/10.1111/jcms.70119)),
+- partitioning of concepts into backbones and redundant sets ([Leifeld and Henrichsen, 2023](https://www.sg.ethz.ch/talks/2023_mmm/leifeld/Leifeld.pdf)),
+- ideological scaling via item response theory ([Leifeld et al., 2022](https://doi.org/10.1080/13501763.2021.1945131); [Henrichsen et al., 2025](https://doi.org/10.1177/20531680241307940)),
+- polarization analysis ([Leifeld and Fisher, 2025](https://doi.org/10.17645/pag.9933)),
+- barplots ([Leifeld and Haunss, 2012](https://doi.org/10.1111/j.1475-6765.2011.02003.x); [Leifeld and Henrichsen, 2023](https://www.sg.ethz.ch/talks/2023_mmm/leifeld/Leifeld.pdf)), etc.
 
-The old 2.0 version additionally supported data exchange between DNA databases and rDNA by adding or retrieving documents, statements, attributes, statement types, coders etc. The 3.0 version does not support most of this data exchange functionality yet, so if you need to batch-import documents, for example, use DNA 2.0 first and then import everything into a DNA 3.0 database for further analysis (note that you cannot import from 3.0 into 2.0). More functions for data exchange and analysis will be added in the future.
+Previous advice recommended installing DNA 2.0 for data exchange (e.g., adding documents or statements), but this is no longer recommended as a lot of this functionality was added back into version 3.1.0.
 
-To install the new rDNA 3 directly from GitHub, try the following code in R:
+To install the new rDNA directly from GitHub, try the following code in R:
 
 ``` r
 # install.packages("remotes")
@@ -73,23 +73,6 @@ remotes::install_github("leifeld/dna/rDNA/rDNA@*release",
 ```
 
 Note that the package relies on `rJava`, which needs to be installed first.
-
-## Installation of the old rDNA 2.1.18
-For data management, you may still want to use the old rDNA 2.1.18 with DNA 2.0 beta 25. You can install the package directly from GitHub as well. However, you will need to download the correct JAR file and store it either in your working directory or (recommended) in the library path of the installed R package in the "extdata" subdirectory. The following code can do this for you:
-```r
-# install.packages("remotes")
-remotes::install_github("leifeld/dna/rDNA@v2.0-beta.25",
-                        INSTALL_opts = "--no-multiarch")
-
-# find out where to store the JAR file
-dest <- paste0(dirname(system.file(".", package = "rDNA")),
-               "/extdata/dna-2.0-beta25.jar")
-
-# download JAR file and store in library path
-u <- "https://github.com/leifeld/dna/releases/download/v2.0-beta.25/dna-2.0-beta25.jar"
-download.file(url = u, destfile = dest, mode = "wb")
-
-```
 
 ## Documentation and community
 

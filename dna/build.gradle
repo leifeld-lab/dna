@@ -82,6 +82,8 @@ dependencies {
     implementation group: 'org.ojalgo', name: 'ojalgo', version: '51.4.1'
     // https://mvnrepository.com/artifact/org.apache.commons/commons-math3
     implementation group: 'org.apache.commons', name: 'commons-math3', version: '3.6.1'
+    // https://mvnrepository.com/artifact/org.apache.xmlgraphics/batik-transcoder
+    implementation group: 'org.apache.xmlgraphics', name: 'batik-transcoder', version: '1.16'
 }
 
 // Extend the default clean task to include custom directories and files

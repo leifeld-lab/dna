@@ -321,7 +321,7 @@ public class StatementRecoder extends JDialog {
 		statementDetailsPanel.add(coderRevertButton, gbc);
 		
 		gbc.gridx++;
-		ImageIcon applyAllIcon = new ImageIcon(new ImageIcon(getClass().getResource("/icons/tabler-icon-copy.png")).getImage().getScaledInstance(18, 18, Image.SCALE_SMOOTH));
+		ImageIcon applyAllIcon = new SvgIcon("/icons/tabler_copy.svg", 18).getImageIcon();
 		JButton applyAllCoderButton = new JButton(applyAllIcon);
 		applyAllCoderButton.setPreferredSize(new Dimension(h, h));
 		applyAllCoderButton.setToolTipText("Apply this coder to all " + statementIds.length + " selected statements.");
