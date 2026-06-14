@@ -82,11 +82,11 @@ Note that the package relies on `rJava`, which needs to be installed first.
 
 - See the [bibliography](./build/bibliography.md) for several hundred publications and theses using discourse network analysis or the DNA software.
 
-- The **introductory chapter** (Leifeld 2017) in the *Oxford Handbook of Political Networks* is recommended as a primer ([chapter](https://doi.org/10.1093/oxfordhb/9780190228217.013.25); [preprint](http://eprints.gla.ac.uk/121525/)).
+- Recommended primers: [Leifeld, 2017](http://eprints.gla.ac.uk/121525/); [Leifeld and Mastroianni, 2025](https://research.manchester.ac.uk/en/publications/discourse-network-analysis-and-its-use-in-education/); [Leifeld, 2020](https://doi.org/10.17645/pag.v8i2.3249).
 
-- The previous version of DNA and rDNA came with a detailed [manual](https://github.com/leifeld/dna/releases/download/v2.0-beta.25/dna-manual.pdf) of more than 100 pages. It is outdated, but perhaps still useful.
+- The previous version of DNA and rDNA came with a detailed [manual](https://github.com/leifeld-lab/dna/releases/download/v2.0-beta.25/dna-manual.pdf) of more than 100 pages. It is outdated, but perhaps still useful.
 
-- If you have questions or want to report bugs, please create an issue in the [issue tracker](https://github.com/leifeld/dna/issues).
+- If you have questions or want to report bugs, please create an issue in the [issue tracker](https://github.com/leifeld-lab/dna/issues).
 
 - [Discussions](https://github.com/leifeld-lab/dna/discussions): Ask questions, introduce yourself or your DNA application, or engage with the DNA community. We used to have a Matrix channel for real-time chats about DNA but recently retired it. The Discussion forum will take its place. It currently looks pretty empty because it's new, but feel free to give it a try to get the ball rolling.
 
@@ -95,12 +95,13 @@ Note that the package relies on `rJava`, which needs to be installed first.
 Please consider contributing to the project by:
 - telling other people about the software,
 - citing our underlying [research](https://www.philipleifeld.com/publications) in your publications,
-- reporting or fixing [issues](https://github.com/leifeld/issues), or
+- reporting or fixing [issues](https://github.com/leifeld-lab/dna/issues), or
 - starting pull requests to contribute bug fixes or new functionality.
 
 Some suggestions of new functionality you could add via pull requests:
 - Import filters for loading data from Nvivo, MaxQDA, and other software into DNA.
 - Export filters for exporting networks to Gephi and other network analysis software.
-- Analysis functions or unit tests for the rDNA package.
-- Publications for the bibliography.
+- Analysis functions or [unit tests](./rDNA/rDNA/tests/testthat) for the rDNA package.
+- Publications for the [bibliography](./bibliography/bibliography.bib).
 - Bug fixes.
+- For entry points into collaboration, complete one of the [challenges](https://leifeld-lab.github.io/challenges.html) of the [Leifeld Lab](https://leifeld-lab.github.io).
