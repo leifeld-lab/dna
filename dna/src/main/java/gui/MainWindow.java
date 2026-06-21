@@ -1537,10 +1537,10 @@ public class MainWindow extends JFrame {
 				Dna.logger.log(le);
 			} else {
 				String version = new Sql(cp, false).getVersion();
-				if (!version.startsWith("3.0")) {
+				if (!version.startsWith("3.")) {
 					LogEvent le = new LogEvent(Logger.ERROR,
 							"[GUI] Tried to open an incompatible database version.",
-							"You tried to open a DNA database with version " + version + ", but you can only open databases with version 3.0. Data from version 2 databases can also be imported into a new or existing DNA 3 database using the importer in the Documents menu.");
+							"You tried to open a DNA database with version " + version + ", but you can only open databases with version 3. Data from version 2 databases can also be imported into a new or existing DNA 3 database using the importer in the Documents menu.");
 					Dna.logger.log(le);
 				} else {
 					Dna.sql.setConnectionProfile(cp, false);

@@ -120,7 +120,7 @@ public class HeadlessDna implements Logger.LogListener {
 		boolean success = testSql.authenticate(coderId, coderPassword);
 		String version = testSql.getVersion();
 		if (success) {
-			if (version.startsWith("3.0")) {
+			if (version.startsWith("3.")) {
 				Dna.sql.setConnectionProfile(cp, false);
 				Dna.sql.selectCoder(coderId);
 				LogEvent l = new LogEvent(Logger.MESSAGE,
@@ -130,7 +130,7 @@ public class HeadlessDna implements Logger.LogListener {
 			} else {
 				LogEvent l = new LogEvent(Logger.ERROR,
 						"Tried to open an incompatible database version.",
-						"You tried to open a DNA database with version \" + version + \", but you can only open databases with version 3.0. Data from version 2 databases can also be imported into a new or existing DNA 3 database using the importer in the Documents menu.");
+						"You tried to open a DNA database with version \" + version + \", but you can only open databases with version 3. Data from version 2 databases can also be imported into a new or existing DNA 3 database using the importer in the Documents menu.");
 				Dna.logger.log(l);
 			}
 
