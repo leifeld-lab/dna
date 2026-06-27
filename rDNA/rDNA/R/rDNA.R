@@ -63,6 +63,7 @@ dna_init <- function(jarfile = dna_jar(), memory = 1024, returnString = FALSE) {
   }
   assign("jar", jarfile, pos = dnaEnvironment)
   message(paste("Jar file:", dnaEnvironment[["jar"]]))
+  Sys.setenv(JAVA_TOOL_OPTIONS = "--enable-native-access=ALL-UNNAMED")
   .jinit(dnaEnvironment[["jar"]],
          force.init = TRUE,
          parameters = paste0("-Xmx", memory, "m"))
