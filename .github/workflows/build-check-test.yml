@@ -63,6 +63,7 @@ jobs:
       # ---- Check and test rDNA package ----
       - name: Run R CMD check (Gradle-built tarball)
         working-directory: build
+        shell: bash
         run: |
           R CMD check --as-cran rDNA_*.tar.gz
 
