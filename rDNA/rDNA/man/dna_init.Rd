@@ -4,7 +4,7 @@
 \alias{dna_init}
 \title{Initialize the connection with DNA}
 \usage{
-dna_init(jarfile = dna_jar(), memory = 1024, returnString = FALSE)
+dna_init(jarfile = dna_jar(), jvm_args = NULL, returnString = FALSE)
 }
 \arguments{
 \item{jarfile}{The file name of the DNA jar file, e.g.,
@@ -12,8 +12,11 @@ dna_init(jarfile = dna_jar(), memory = 1024, returnString = FALSE)
 \code{\link{dna_jar}} function, which looks for a version matching the
 installed \pkg{rDNA} version in the library path and working directory.}
 
-\item{memory}{The amount of memory in megabytes to allocate to DNA, for
-example \code{1024} or \code{4096}.}
+\item{jvm_args}{Additional parameters for initialising the Java virtual
+machine. For example, \code{"-Xmx1024m"} will allocate 1GB of RAM, a
+recommended size. You may set a higher value if you run out of memory, for
+example \code{"-Xmx4096m"}. By default, the Java virtual machine allocates
+some fraction of the available RAM if not specified.}
 
 \item{returnString}{Return a character object representing the jar file name?}
 }

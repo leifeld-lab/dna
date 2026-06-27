@@ -1,7 +1,6 @@
 context("data access")
 
 preparation <- function() {
-  dna_init()
   dna_sample(overwrite = TRUE)
   dna_openDatabase(db_url = "sample.dna", coderId = 1, coderPassword = "sample")
 }

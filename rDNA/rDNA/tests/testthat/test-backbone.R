@@ -2,7 +2,6 @@ context("backbone")
 
 test_that("Penalized backbone works", {
   samp <- dna_sample(overwrite = TRUE)
-  dna_init()
   dna_openDatabase(samp, coderId = 1, coderPassword = "sample")
   b <- dna_backbone(method = "penalty",
                     penalty = 3.5,
@@ -37,7 +36,6 @@ test_that("Penalized backbone works", {
 })
 
 test_that("Plot method works for backbones with penalty", {
-  dna_init()
   samp <- dna_sample(overwrite = TRUE)
   dna_openDatabase(samp, coderId = 1, coderPassword = "sample")
   b <- dna_backbone(method = "penalty",
@@ -62,7 +60,6 @@ test_that("Plot method works for backbones with penalty", {
 })
 
 test_that("Autoplot method works for backbones with penalty", {
-  dna_init()
   samp <- dna_sample(overwrite = TRUE)
   dna_openDatabase(samp, coderId = 1, coderPassword = "sample")
   b <- dna_backbone(method = "penalty",
@@ -84,7 +81,6 @@ test_that("Autoplot method works for backbones with penalty", {
 })
 
 test_that("Fixed backbone works", {
-  dna_init()
   samp <- dna_sample(overwrite = TRUE)
   dna_openDatabase(samp, coderId = 1, coderPassword = "sample")
   b <- dna_backbone(method = "fixed",
@@ -120,7 +116,6 @@ test_that("Fixed backbone works", {
 })
 
 test_that("Plot method works for fixed backbone size", {
-  dna_init()
   samp <- dna_sample(overwrite = TRUE)
   dna_openDatabase(samp, coderId = 1, coderPassword = "sample")
   b <- dna_backbone(method = "fixed",
@@ -145,7 +140,6 @@ test_that("Plot method works for fixed backbone size", {
 })
 
 test_that("Autoplot method works for backbones with fixed size", {
-  dna_init()
   samp <- dna_sample(overwrite = TRUE)
   dna_openDatabase(samp, coderId = 1, coderPassword = "sample")
   b <- dna_backbone(method = "fixed",
@@ -167,7 +161,6 @@ test_that("Autoplot method works for backbones with fixed size", {
 })
 
 test_that("Nested backbone works", {
-  dna_init()
   samp <- dna_sample(overwrite = TRUE)
   dna_openDatabase(samp, coderId = 1, coderPassword = "sample")
   b <- dna_backbone(method = "nested",
@@ -194,7 +187,6 @@ test_that("Nested backbone works", {
 })
 
 test_that("Plot method works for nested backbone", {
-  dna_init()
   samp <- dna_sample(overwrite = TRUE)
   dna_openDatabase(samp, coderId = 1, coderPassword = "sample")
   b <- dna_backbone(method = "nested",
@@ -217,7 +209,6 @@ test_that("Plot method works for nested backbone", {
 })
 
 test_that("Autoplot method works for nested backbones", {
-  dna_init()
   samp <- dna_sample(overwrite = TRUE)
   dna_openDatabase(samp, coderId = 1, coderPassword = "sample")
   b <- dna_backbone(method = "nested",
@@ -236,7 +227,6 @@ test_that("Autoplot method works for nested backbones", {
 
 
 test_that("Evaluate backbone solution works", {
-  dna_init()
   samp <- dna_sample(overwrite = TRUE)
   dna_openDatabase(samp, coderId = 1, coderPassword = "sample")
   b <- dna_evaluateBackboneSolution(

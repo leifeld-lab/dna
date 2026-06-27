@@ -1,7 +1,6 @@
 context("data access")
 
 test_that("DNA can use databases and profiles", {
-  dna_init()
   s <- dna_sample(overwrite = TRUE)
   expect_equal(dim(dna_queryCoders("sample.dna")), c(4, 3))
   expect_false(dna_openDatabase(db_url = s, coderId = 12, coderPassword = "sample"))
@@ -26,7 +25,6 @@ test_that("DNA can use databases and profiles", {
 })
 
 test_that("dna_sample works", {
-  dna_init()
   expect_equal(dna_sample(overwrite = TRUE), paste0(getwd(), "/sample.dna"))
   expect_true(file.exists(paste0(getwd(), "/sample.dna")))
   expect_gt(file.size(paste0(getwd(), "/sample.dna")), 200000)
@@ -35,7 +33,6 @@ test_that("dna_sample works", {
 })
 
 test_that("statement management works", {
-  dna_init()
   samp <- dna_sample(overwrite = TRUE)
   dna_openDatabase(samp, coderId = 1, coderPassword = "sample")
 
@@ -92,7 +89,6 @@ test_that("statement management works", {
 })
 
 test_that("attribute management works", {
-  dna_init()
   samp <- dna_sample(overwrite = TRUE)
   dna_openDatabase(samp, coderId = 1, coderPassword = "sample")
 
@@ -179,7 +175,6 @@ test_that("attribute management works", {
 })
 
 test_that("document management works", {
-  dna_init()
   samp <- dna_sample(overwrite = TRUE)
   dna_openDatabase(samp, coderId = 1, coderPassword = "sample")
 

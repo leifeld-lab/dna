@@ -33,8 +33,11 @@ dnaEnvironment <- new.env(hash = TRUE, parent = emptyenv())
 #'   \code{"dna-3.0.7.jar"}. Can be auto-detected using the
 #'   \code{\link{dna_jar}} function, which looks for a version matching the
 #'   installed \pkg{rDNA} version in the library path and working directory.
-#' @param memory The amount of memory in megabytes to allocate to DNA, for
-#'   example \code{1024} or \code{4096}.
+#' @param jvm_args Additional parameters for initialising the Java virtual
+#'   machine. For example, \code{"-Xmx1024m"} will allocate 1GB of RAM, a
+#'   recommended size. You may set a higher value if you run out of memory, for
+#'   example \code{"-Xmx4096m"}. By default, the Java virtual machine allocates
+#'   some fraction of the available RAM if not specified.
 #' @param returnString Return a character object representing the jar file name?
 #'
 #' @author Philip Leifeld
@@ -48,7 +51,10 @@ dnaEnvironment <- new.env(hash = TRUE, parent = emptyenv())
 #'
 #' @export
 #' @importFrom rJava .jinit .jnew .jarray
-dna_init <- function(jarfile = dna_jar(), memory = 1024, returnString = FALSE) {
+dna_init <- function(jarfile = dna_jar(), jvm_args = NULL, returnString = FALSE) {
+  if (!is.null(dnaEnvironment[["dna"]])) {
+    return(invisible(dnaEnvironment[["dna"]]))
+  }
   if (is.null(jarfile) || length(jarfile) == 0 || is.na(jarfile)) {
     stop("Invalid jar file name.")
     if (isTRUE(returnString)) {
@@ -63,10 +69,18 @@ dna_init <- function(jarfile = dna_jar(), memory = 1024, returnString = FALSE) {
   }
   assign("jar", jarfile, pos = dnaEnvironment)
   message(paste("Jar file:", dnaEnvironment[["jar"]]))
+  if (!is.null(jvm_args) && (is.na(jvm_args) || jvm_args == "")) {
+    jvm_args <- NULL
+  }
   Sys.setenv(JAVA_TOOL_OPTIONS = "--enable-native-access=ALL-UNNAMED")
-  .jinit(dnaEnvironment[["jar"]],
-         force.init = TRUE,
-         parameters = paste0("-Xmx", memory, "m"))
+  if (is.null(jvm_args)) {
+    .jinit(dnaEnvironment[["jar"]],
+           force.init = TRUE)
+  } else {
+    .jinit(dnaEnvironment[["jar"]],
+           force.init = TRUE,
+           parameters = jvm_args)
+  }
   dnaEnvironment[["dna"]] <- .jnew("dna.Dna", .jarray("headless"))
   message("DNA connection established.")
   if (isTRUE(returnString)) {
@@ -98,56 +112,40 @@ dna_init <- function(jarfile = dna_jar(), memory = 1024, returnString = FALSE) {
 #'
 #' @family startup
 #'
-#' @importFrom utils download.file unzip packageVersion
+#' @importFrom utils packageVersion
 #' @export
 dna_jar <- function() {
-  # detect package version
   v <- as.character(packageVersion("rDNA"))
 
-  # try to locate jar file in library path under java/ and return jar file path
-  tryCatch({
-    rdna_dir <- dirname(system.file(".", package = "rDNA"))
-    jar <- paste0(rdna_dir, "/java/dna-", v, ".jar")
-    if (file.exists(jar)) {
+  # 1. installed package location (CRAN-style approach)
+  jar <- system.file("java", paste0("dna-", v, ".jar"), package = "rDNA")
+  if (nzchar(jar) && file.exists(jar)) {
+    message("Jar file found in package.")
+    return(jar)
+  }
+
+  # 2. working directory (user override / dev use)
+  jar <- file.path(getwd(), paste0("dna-", v, ".jar"))
+  if (file.exists(jar)) {
+    message("Jar file found in working directory.")
+    return(jar)
+  }
+
+  # 3. library fallback
+  lib_paths <- .libPaths()
+  for (lib in lib_paths) {
+    candidate <- file.path(lib, "rDNA", "java", paste0("dna-", v, ".jar"))
+    if (file.exists(candidate)) {
       message("Jar file found in library path.")
-      return(jar)
+      return(candidate)
     }
-  }, error = function(e) {success <- FALSE})
+  }
 
-  # try to locate jar file in library path under inst/java/ and return jar file path
-  tryCatch({
-    rdna_dir <- dirname(system.file(".", package = "rDNA"))
-    jar <- paste0(rdna_dir, "/inst/java/dna-", v, ".jar")
-    if (file.exists(jar)) {
-      message("Jar file found in library path.")
-      return(jar)
-    }
-  }, error = function(e) {success <- FALSE})
-
-  # try to locate jar file inside package using system file
-  tryCatch({
-    jar <- system.file(
-      "java",
-      paste0("dna-", v, ".jar"),
-      package = "rDNA"
-    )
-    if (nzchar(jar)) {
-      message("Jar file found in package.")
-      return(jar)
-    }
-  }, error = function(e) {success <- FALSE})
-
-  # try to locate jar file in working directory and return jar file path
-  tryCatch({
-    jar <- paste0(getwd(), "/dna-", v, ".jar")
-    if (file.exists(jar)) {
-      message("Jar file found in working directory.")
-      return(jar)
-    }
-  }, error = function(e) {success <- FALSE})
-
-  stop("DNA jar file could not be found in the library path, package, or ",
-       "working directory. Your current rDNA version is ", v, ".")
+  stop(
+    "DNA jar file could not be found.\n",
+    "Expected version: ", v, "\n",
+    "Looked in package, working directory, and library paths."
+  )
 }
 
 #' Provides a small sample database
