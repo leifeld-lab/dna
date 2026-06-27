@@ -528,9 +528,7 @@ print.dna_phaseTransitions <- function(x, ...) {
 #'   \code{"states"}.
 #'
 #' @author Philip Leifeld, Kristijan Garic
-#' @importFrom ggplot2 autoplot ggplot aes geom_line geom_point xlab ylab
-#'   labs ggtitle theme_bw theme arrow unit scale_shape_manual element_text
-#'   scale_x_datetime scale_colour_manual guides
+#' @importFrom ggplot2 autoplot ggplot aes geom_line geom_point xlab ylab labs ggtitle theme_bw theme arrow unit scale_shape_manual element_text scale_x_datetime scale_colour_manual guides
 #' @importFrom rlang .data
 #' @export
 autoplot.dna_phaseTransitions <- function(object, ..., plots = c("heatmap", "silhouette", "mds", "states")) {

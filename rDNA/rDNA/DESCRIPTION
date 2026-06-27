@@ -1,6 +1,6 @@
 Package: rDNA
 Version: 3.1.1
-Date: 2026-06-21
+Date: 2026-06-27
 Title: Discourse Network Analysis in R
 Authors@R: 
   c(person(given = "Philip",
@@ -46,8 +46,8 @@ Suggests:
     MCMCpack (>= 1.7-0),
     coda (>= 0.19-4.1)
 SystemRequirements: Java (>= 11)
-URL: https://github.com/leifeld/dna
-BugReports: https://github.com/leifeld/dna/issues
+URL: https://github.com/leifeld-lab/dna
+BugReports: https://github.com/leifeld-lab/dna/issues
 License: GPL-3 | file LICENSE
 Encoding: UTF-8
 Language: en-US
