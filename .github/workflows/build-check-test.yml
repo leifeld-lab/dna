@@ -4,8 +4,11 @@ on: [push, pull_request, workflow_dispatch]
 
 jobs:
   build-check:
-    name: Build
-    runs-on: ubuntu-latest
+    name: Build-check-test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
 
     steps:
       - name: Checkout repository
@@ -67,26 +70,26 @@ jobs:
       - name: Upload bibliography artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: bibliography
+          name: bibliography-${{ matrix.os }}
           path: build/bibliography.*
 
       - name: Upload DNA JAR
         uses: actions/upload-artifact@v4
         with:
-          name: dna-jar
+          name: dna-jar-${{ matrix.os }}
           path: build/*.jar
 
       - name: Upload rDNA source package
         uses: actions/upload-artifact@v4
         with:
-          name: rDNA-package
+          name: rDNA-package-${{ matrix.os }}
           path: build/*.tar.gz
 
       - name: Upload R check results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: R-CMD-check
+          name: R-CMD-check-${{ matrix.os }}
           path: |
             build/*.Rcheck/**
             build/00check.log

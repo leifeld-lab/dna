@@ -31,7 +31,7 @@ Along with DNA, it is recommended to download [visone](https://visone.ethz.ch/),
 DNA was written in Java and requires Java 11 or higher on your system. You can check if you have Java >= 11 on your system by opening the terminal of your operating system (e.g., typing `cmd` in your Windows start menu or using the terminal app on MacOS) and typing:
 
 ``` shell
-java --version
+java -version
 ```
 
 If this indicates a version below 11 (or 1.11), installing the latest version of [Adoptium Temurin OpenJDK](https://adoptium.net) or any other Java >= 11 is recommended before you proceed. Once installed, restart your system and check the version again.

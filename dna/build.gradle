@@ -52,8 +52,6 @@ dependencies {
     implementation group: 'com.zaxxer', name: 'HikariCP', version: '5.0.1'
     // https://mvnrepository.com/artifact/org.jasypt/jasypt
     implementation group: 'org.jasypt', name: 'jasypt', version: '1.9.3'
-    // https://mvnrepository.com/artifact/org.nuiton.thirdparty/JRI
-    implementation group: 'org.nuiton.thirdparty', name: 'JRI', version: '0.9-9'
     // https://mvnrepository.com/artifact/com.github.lgooddatepicker/LGoodDatePicker
     implementation group: 'com.github.lgooddatepicker', name: 'LGoodDatePicker', version: '11.2.1'
     // https://mvnrepository.com/artifact/mysql/mysql-connector-java

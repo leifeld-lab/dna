@@ -2,32 +2,23 @@ package dna;
 
 import java.io.File;
 import java.io.PrintStream;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import me.tongfei.progressbar.ProgressBar;
 import model.Value;
 import org.jasypt.exceptions.EncryptionOperationNotPossibleException;
-import org.rosuda.JRI.RConsoleOutputStream;
-import org.rosuda.JRI.Rengine;
 
 import dna.export.*;
 import logger.LogEvent;
 import logger.Logger;
 import model.Coder;
-import model.Document;
-import model.Statement;
 import model.StatementType;
 import sql.ConnectionProfile;
 import sql.Sql;
@@ -42,13 +33,10 @@ public class HeadlessDna implements Logger.LogListener {
 	 * Constructor for creating an instance of the headless DNA class.
 	 */
 	public HeadlessDna() {
-		// divert stdout to R console
-		Rengine r = new Rengine();
-		RConsoleOutputStream rsRegular = new RConsoleOutputStream(r, 0);
-		System.setOut(new PrintStream(rsRegular));
-		RConsoleOutputStream rsWarningError = new RConsoleOutputStream(r, 1);
-		System.setErr(new PrintStream(rsWarningError));
-	}
+        // divert stdout to R console
+        System.setOut(new PrintStream(System.out, true));
+        System.setErr(new PrintStream(System.err, true));
+    }
 
 	/**
 	 * A function for generating a brief report with details about the database.
