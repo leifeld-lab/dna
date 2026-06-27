@@ -27,8 +27,7 @@ dna_openDatabase(s)
 }
 \seealso{
 Other startup: 
-\code{\link{dna_init}()},
-\code{\link{dna_jar}()}
+\code{\link{dna_init}()}
 }
 \author{
 Johannes B. Gruber, Philip Leifeld

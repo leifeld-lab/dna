@@ -1,5 +1,12 @@
 # Package startup --------------------------------------------------------------
 
+#' Register Jar file
+#' @importFrom rJava .jpackage
+#' @noRd
+.onLoad <- function(libname, pkgname) {
+  .jpackage(pkgname)
+}
+
 dnaEnvironment <- new.env(hash = TRUE, parent = emptyenv())
 
 #' Display version number and date when the package is loaded.
@@ -14,7 +21,7 @@ dnaEnvironment <- new.env(hash = TRUE, parent = emptyenv())
     'Contributors: Tim Henrichsen (University of Birmingham),\n',
     '              Johannes B. Gruber (Vrije Universiteit Amsterdam)\n',
     '              Kristijan Garic (University of Essex)\n',
-    'Project home: github.com/leifeld/dna'
+    'Project home: github.com/leifeld-lab/dna'
   )
 }
 
@@ -22,23 +29,29 @@ dnaEnvironment <- new.env(hash = TRUE, parent = emptyenv())
 #'
 #' Establish a connection between \pkg{rDNA} and the DNA software.
 #'
-#' To use \pkg{rDNA}, DNA first needs to be initialized. This means that
-#' \pkg{rDNA} needs to be told where the DNA executable file, i.e., the jar
-#' file, is located. When the \code{dna_init} function is used, the connection
-#' to the DNA software is established, and this connection is valid for the rest
-#' of the \R session. To initialize a connection with a different DNA version or
-#' path, the \R session would need to be restarted first.
+#' To use \pkg{rDNA}, DNA first needs to be initialized. When the
+#' \code{dna_init} function is used, the connection to the DNA software is
+#' established, and this connection is valid for the rest of the \R session. To
+#' initialize a connection with a different DNA version or path, the \R session
+#' would need to be restarted first.
 #'
-#' @param jarfile The file name of the DNA jar file, e.g.,
-#'   \code{"dna-3.0.7.jar"}. Can be auto-detected using the
-#'   \code{\link{dna_jar}} function, which looks for a version matching the
-#'   installed \pkg{rDNA} version in the library path and working directory.
-#' @param jvm_args Additional parameters for initialising the Java virtual
-#'   machine. For example, \code{"-Xmx1024m"} will allocate 1GB of RAM, a
-#'   recommended size. You may set a higher value if you run out of memory, for
-#'   example \code{"-Xmx4096m"}. By default, the Java virtual machine allocates
-#'   some fraction of the available RAM if not specified.
-#' @param returnString Return a character object representing the jar file name?
+#' @section Java configuration:
+#' rDNA uses a Java backend (rJava). In some environments (e.g. newer JVMs),
+#' you may see warnings about restricted native access.
+#'
+#' To suppress these warnings, you can optionally set:
+#' JAVA_TOOL_OPTIONS=--enable-native-access=ALL-UNNAMED
+#'
+#' This is not required for normal usage, but may improve console output
+#' cleanliness depending on your Java version. These options are set outside of
+#' \R (e.g., in your shell or in an `.Renviron` file).
+#'
+#' @section Java memory:
+#' You can set JVM memory before starting R if you run out of heap space, e.g.:
+#' JAVA_TOOL_OPTIONS=-Xmx4g
+#'
+#' You can set multiple Java tool options at once, for example:
+#' JAVA_TOOL_OPTIONS="-Xmx4g --enable-native-access=ALL-UNNAMED"
 #'
 #' @author Philip Leifeld
 #'
@@ -50,102 +63,66 @@ dnaEnvironment <- new.env(hash = TRUE, parent = emptyenv())
 #' @family startup
 #'
 #' @export
-#' @importFrom rJava .jinit .jnew .jarray
-dna_init <- function(jarfile = dna_jar(), jvm_args = NULL, returnString = FALSE) {
+#' @importFrom rJava .jvmState .jnew .jarray .jpackage
+dna_init <- function() {
+  jar_path <- list.files(
+    system.file("java", package = "rDNA"),
+    pattern = "^dna-.*\\.jar$",
+    full.names = TRUE
+  )[1]
+
+  if (is.na(jar_path) || !file.exists(jar_path)) {
+    stop("DNA jar not found in package.")
+  }
+
   if (!is.null(dnaEnvironment[["dna"]])) {
-    return(invisible(dnaEnvironment[["dna"]]))
-  }
-  if (is.null(jarfile) || length(jarfile) == 0 || is.na(jarfile)) {
-    stop("Invalid jar file name.")
-    if (isTRUE(returnString)) {
-      return(NULL)
-    }
-  }
-  if (!is.character(jarfile) || length(jarfile) > 1 || !grepl("^dna-.+\\.jar$", basename(jarfile))) {
-    stop("'jarfile' must be a character object of length 1 that points to the DNA jar file.")
-  }
-  if (!file.exists(jarfile)) {
-    stop(paste0("jarfile '", jarfile, "' could not be located."))
-  }
-  assign("jar", jarfile, pos = dnaEnvironment)
-  message(paste("Jar file:", dnaEnvironment[["jar"]]))
-  if (!is.null(jvm_args) && (is.na(jvm_args) || jvm_args == "")) {
-    jvm_args <- NULL
-  }
-  Sys.setenv(JAVA_TOOL_OPTIONS = "--enable-native-access=ALL-UNNAMED")
-  if (is.null(jvm_args)) {
-    .jinit(dnaEnvironment[["jar"]],
-           force.init = TRUE)
-  } else {
-    .jinit(dnaEnvironment[["jar"]],
-           force.init = TRUE,
-           parameters = jvm_args)
+    message("DNA already initialized.")
+    return(invisible(TRUE))
   }
   dnaEnvironment[["dna"]] <- .jnew("dna.Dna", .jarray("headless"))
   message("DNA connection established.")
-  if (isTRUE(returnString)) {
-    return(jarfile)
-  }
 }
 
-#' Find the DNA jar file
+#' Get a reference to the headless Java class for R (API)
 #'
-#' Find the DNA jar file in the library path or working directory.
+#' Get a reference to the headless Java class for R (API).
 #'
-#' rDNA requires the installation of a DNA jar file to run properly. The jar
-#' file is shipped with the rDNA package and is installed in the \code{java/}
-#' directory of the package installation directory in the R library tree. The
-#' version number of the jar file and the rDNA package must match for DNA and
-#' rDNA to be able to work together. The \code{dna_jar} function looks for
-#' the jar file in the package installation directory sub-directory and
-#' returns its file name with its absolute path. If it cannot be found in the
-#' installation directory, the function looks in the current working
-#' directory. The function is also called by \code{\link{dna_init}} if the
-#' location of the jar file is not provided explicitly. Users do not normally
-#' need to use the \code{dna_jar} function and are instead asked to use
-#' \code{\link{dna_init}}.
+#' This function returns a Java object reference to the instance of the
+#' \code{Dna/HeadlessDna} class in the DNA JAR file that is held in the rDNA
+#' package environment and used by the functions in the package to exchange data
+#' with the Java application. You can use the \pkg{rJava} package to access the
+#' available functions in this class directly. API access requires detailed
+#' knowledge of the DNA JAR classes and functions and is recommended for
+#' developers and advanced users only.
 #'
-#' @return The file name of the jar file that matches the installed \pkg{rDNA}
-#'   version, including full path.
+#' @return A Java object reference to the \code{Dna/HeadlessDna} class.
 #'
 #' @author Philip Leifeld
 #'
-#' @family startup
+#' @examples
+#' \dontrun{
+#' library("rJava") # load rJava package to use functions in the Java API
+#' dna_init()
+#' dna_sample()
+#' dna_openDatabase(coderId = 1,
+#'                  coderPassword = "sample",
+#'                  db_url = "sample.dna")
+#' api <- dna_api()
 #'
-#' @importFrom utils packageVersion
+#' # use the \code{getVariables} function to retrieve variables
+#' variable_references <- api$getVariables("DNA Statement")
+#'
+#' # iterate through variable references and print their data type
+#' for (i in seq(variable_references$size()) - 1) {
+#'   print(variable_references$get(as.integer(i))$getDataType())
+#' }
+#' }
+#'
+#' @family database
+#'
 #' @export
-dna_jar <- function() {
-  v <- as.character(packageVersion("rDNA"))
-
-  # 1. installed package location (CRAN-style approach)
-  jar <- system.file("java", paste0("dna-", v, ".jar"), package = "rDNA")
-  if (nzchar(jar) && file.exists(jar)) {
-    message("Jar file found in package.")
-    return(jar)
-  }
-
-  # 2. working directory (user override / dev use)
-  jar <- file.path(getwd(), paste0("dna-", v, ".jar"))
-  if (file.exists(jar)) {
-    message("Jar file found in working directory.")
-    return(jar)
-  }
-
-  # 3. library fallback
-  lib_paths <- .libPaths()
-  for (lib in lib_paths) {
-    candidate <- file.path(lib, "rDNA", "java", paste0("dna-", v, ".jar"))
-    if (file.exists(candidate)) {
-      message("Jar file found in library path.")
-      return(candidate)
-    }
-  }
-
-  stop(
-    "DNA jar file could not be found.\n",
-    "Expected version: ", v, "\n",
-    "Looked in package, working directory, and library paths."
-  )
+dna_api <- function() {
+  return(dnaEnvironment[["dna"]]$headlessDna)
 }
 
 #' Provides a small sample database
@@ -473,48 +450,6 @@ dna_saveConnectionProfile <- function(file, coderPassword = "") {
 #' @importFrom rJava .jcall
 dna_printDetails <- function() {
   .jcall(dna_api(), "V", "printDatabaseDetails")
-}
-
-#' Get a reference to the headless Java class for R (API)
-#'
-#' Get a reference to the headless Java class for R (API).
-#'
-#' This function returns a Java object reference to the instance of the
-#' \code{Dna/HeadlessDna} class in the DNA JAR file that is held in the rDNA
-#' package environment and used by the functions in the package to exchange data
-#' with the Java application. You can use the \pkg{rJava} package to access the
-#' available functions in this class directly. API access requires detailed
-#' knowledge of the DNA JAR classes and functions and is recommended for
-#' developers and advanced users only.
-#'
-#' @return A Java object reference to the \code{Dna/HeadlessDna} class.
-#'
-#' @author Philip Leifeld
-#'
-#' @examples
-#' \dontrun{
-#' library("rJava") # load rJava package to use functions in the Java API
-#' dna_init()
-#' dna_sample()
-#' dna_openDatabase(coderId = 1,
-#'                  coderPassword = "sample",
-#'                  db_url = "sample.dna")
-#' api <- dna_api()
-#'
-#' # use the \code{getVariables} function to retrieve variables
-#' variable_references <- api$getVariables("DNA Statement")
-#'
-#' # iterate through variable references and print their data type
-#' for (i in seq(variable_references$size()) - 1) {
-#'   print(variable_references$get(as.integer(i))$getDataType())
-#' }
-#' }
-#'
-#' @family database
-#'
-#' @export
-dna_api <- function() {
-  return(dnaEnvironment[["dna"]]$headlessDna)
 }
 
 # Coder management--------------------------------------------------------------

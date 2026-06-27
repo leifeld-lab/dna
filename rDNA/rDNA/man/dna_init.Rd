@@ -4,33 +4,40 @@
 \alias{dna_init}
 \title{Initialize the connection with DNA}
 \usage{
-dna_init(jarfile = dna_jar(), jvm_args = NULL, returnString = FALSE)
-}
-\arguments{
-\item{jarfile}{The file name of the DNA jar file, e.g.,
-\code{"dna-3.0.7.jar"}. Can be auto-detected using the
-\code{\link{dna_jar}} function, which looks for a version matching the
-installed \pkg{rDNA} version in the library path and working directory.}
-
-\item{jvm_args}{Additional parameters for initialising the Java virtual
-machine. For example, \code{"-Xmx1024m"} will allocate 1GB of RAM, a
-recommended size. You may set a higher value if you run out of memory, for
-example \code{"-Xmx4096m"}. By default, the Java virtual machine allocates
-some fraction of the available RAM if not specified.}
-
-\item{returnString}{Return a character object representing the jar file name?}
+dna_init()
 }
 \description{
 Establish a connection between \pkg{rDNA} and the DNA software.
 }
 \details{
-To use \pkg{rDNA}, DNA first needs to be initialized. This means that
-\pkg{rDNA} needs to be told where the DNA executable file, i.e., the jar
-file, is located. When the \code{dna_init} function is used, the connection
-to the DNA software is established, and this connection is valid for the rest
-of the \R session. To initialize a connection with a different DNA version or
-path, the \R session would need to be restarted first.
+To use \pkg{rDNA}, DNA first needs to be initialized. When the
+\code{dna_init} function is used, the connection to the DNA software is
+established, and this connection is valid for the rest of the \R session. To
+initialize a connection with a different DNA version or path, the \R session
+would need to be restarted first.
 }
+\section{Java configuration}{
+
+rDNA uses a Java backend (rJava). In some environments (e.g. newer JVMs),
+you may see warnings about restricted native access.
+
+To suppress these warnings, you can optionally set:
+JAVA_TOOL_OPTIONS=--enable-native-access=ALL-UNNAMED
+
+This is not required for normal usage, but may improve console output
+cleanliness depending on your Java version. These options are set outside of
+\R (e.g., in your shell or in an `.Renviron` file).
+}
+
+\section{Java memory}{
+
+You can set JVM memory before starting R if you run out of heap space, e.g.:
+JAVA_TOOL_OPTIONS=-Xmx4g
+
+You can set multiple Java tool options at once, for example:
+JAVA_TOOL_OPTIONS="-Xmx4g --enable-native-access=ALL-UNNAMED"
+}
+
 \examples{
 \dontrun{
 dna_init()
@@ -39,7 +46,6 @@ dna_init()
 }
 \seealso{
 Other startup: 
-\code{\link{dna_jar}()},
 \code{\link{dna_sample}()}
 }
 \author{
