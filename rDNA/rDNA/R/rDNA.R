@@ -122,6 +122,9 @@ dna_init <- function() {
 #'
 #' @export
 dna_api <- function() {
+  if (is.null(dnaEnvironment[["dna"]]$headlessDna)) {
+    stop("DNA Java classes not found. Have you initialized DNA? Try `dna_init()` first.")
+  }
   return(dnaEnvironment[["dna"]]$headlessDna)
 }
 

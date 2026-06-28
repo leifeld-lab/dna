@@ -485,8 +485,8 @@ print.dna_network_onemode <- function(x, trim = 5, attr = TRUE, ...) {
   attr(x, "class") <- NULL
   print(x)
   if (attr) {
-    cat("\nStart:", as.character(start))
-    cat("\nStop: ", as.character(stop))
+    cat("\nStart:", format(start, tz = "UTC"))
+    cat("\nStop: ", format(stop, tz = "UTC"))
     cat("\nStatements:", ns)
     cat("\nCall:", trimws(cl))
     if (onemode) {

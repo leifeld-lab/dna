@@ -72,3 +72,60 @@ test_that("dna_tidygraph works", {
 
   cleanup()
 })
+
+test_that("excluding values in dna_network works", {
+  preparation()
+
+  # no exclude
+  expect_equal(dim(dna_network(networkType = "onemode",
+                               variable1 = "organization",
+                               variable2 = "concept",
+                               qualifier = "agreement",
+                               qualifierAggregation = "congruence",
+                               normalization = "average")),
+               c(7, 7))
+  expect_equal(round(sum(dna_network(networkType = "onemode",
+                                     variable1 = "organization",
+                                     variable2 = "concept",
+                                     qualifier = "agreement",
+                                     qualifierAggregation = "congruence",
+                                     normalization = "average"))),
+               26)
+
+  # exclude values
+  expect_equal(dim(dna_network(networkType = "onemode",
+                               variable1 = "organization",
+                               variable2 = "concept",
+                               qualifier = "agreement",
+                               qualifierAggregation = "congruence",
+                               normalization = "average",
+                               excludeValues = list(
+                                 "concept" = "There should be legislation to regulate emissions.",
+                                 "organization" = c("Senate", "Sierra Club")
+                               ))),
+               c(5, 5))
+  expect_equal(round(sum(dna_network(networkType = "onemode",
+                                     variable1 = "organization",
+                                     variable2 = "concept",
+                                     qualifier = "agreement",
+                                     qualifierAggregation = "congruence",
+                                     normalization = "average",
+                                     excludeValues = list(
+                                       "concept" = "There should be legislation to regulate emissions.",
+                                       "organization" = c("Senate", "Sierra Club")
+                                     )))),
+               10)
+
+  # sections and invert
+  expect_equal(dim(dna_network(networkType = "onemode",
+                               variable1 = "organization",
+                               variable2 = "concept",
+                               qualifier = "agreement",
+                               qualifierAggregation = "congruence",
+                               normalization = "average",
+                               excludeSections = "1",
+                               invertSections = TRUE)),
+               c(4, 4))
+
+  cleanup()
+})
