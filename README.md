@@ -22,7 +22,7 @@ To use DNA, simply download the latest `.jar` file under "[Releases](https://git
 If your system does not want to start DNA with a double-click on the `.jar` file, you can also open it from the terminal. To do so, navigate to the directory where the `.jar` file is stored on your computer using the `cd` command, for example `cd ~/Documents/`. Once there, type in something like this, with the `.jar` file corresponding to the file version you downloaded:
 
 ``` shell
-java -jar dna-3.1.0.jar
+java -jar dna-3.1.1.jar
 ```
 
 Along with DNA, it is recommended to download [visone](https://visone.ethz.ch/), which can be opened in the same way as DNA. You can open `.graphml` files from DNA's network export in visone.
