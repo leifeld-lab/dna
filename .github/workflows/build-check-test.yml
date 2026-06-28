@@ -50,9 +50,7 @@ jobs:
       - name: Update TinyTeX and install LaTeX packages
         run: |
           tlmgr update --self
-          tlmgr install ec
-          tlmgr install cm-super
-          tlmgr install urlbst
+          tlmgr install ec cm-super urlbst psnfss courier times helvetic
 
       - name: Set up pandoc
         uses: r-lib/actions/setup-pandoc@v2
