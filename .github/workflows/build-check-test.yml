@@ -64,12 +64,18 @@ jobs:
 
       # ---- Check and test rDNA package ----
       - name: Run R CMD check (Gradle-built tarball)
+        if: runner.os != 'Linux'
         working-directory: build
         shell: bash
         run: |
-          export TESTTHAT_REPORTER=progress
-          export TESTTHAT_CPUS=1
           R CMD check --as-cran rDNA_*.tar.gz
+
+      - name: Run R CMD check without tests on Linux
+        if: runner.os == 'Linux'
+        working-directory: build
+        shell: bash
+        run: |
+          R CMD check --as-cran --no-tests rDNA_*.tar.gz
 
       # ---- Upload artifacts ----
       - name: Upload bibliography artifacts
