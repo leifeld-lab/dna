@@ -22,7 +22,7 @@ rDNA uses a Java backend (rJava). In some environments (e.g. newer JVMs),
 you may see warnings about restricted native access.
 
 To suppress these warnings, you can optionally set:
-JAVA_TOOL_OPTIONS=--enable-native-access=ALL-UNNAMED
+`JAVA_TOOL_OPTIONS=--enable-native-access=ALL-UNNAMED`
 
 This is not required for normal usage, but may improve console output
 cleanliness depending on your Java version. These options are set outside of
@@ -32,10 +32,10 @@ cleanliness depending on your Java version. These options are set outside of
 \section{Java memory}{
 
 You can set JVM memory before starting R if you run out of heap space, e.g.:
-JAVA_TOOL_OPTIONS=-Xmx4g
+`JAVA_TOOL_OPTIONS=-Xmx4g`
 
 You can set multiple Java tool options at once, for example:
-JAVA_TOOL_OPTIONS="-Xmx4g --enable-native-access=ALL-UNNAMED"
+`JAVA_TOOL_OPTIONS="-Xmx4g --enable-native-access=ALL-UNNAMED"`
 }
 
 \examples{
