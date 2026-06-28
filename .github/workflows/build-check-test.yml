@@ -67,11 +67,9 @@ jobs:
         working-directory: build
         shell: bash
         run: |
-          if [[ "$RUNNER_OS" == "Linux" ]]; then
-            stdbuf -oL -eL R CMD check --as-cran rDNA_*.tar.gz | tee check.log
-          else
-            R CMD check --as-cran rDNA_*.tar.gz | tee check.log
-          fi
+          export TESTTHAT_REPORTER=progress
+          export TESTTHAT_CPUS=1
+          R CMD check --as-cran rDNA_*.tar.gz
 
       # ---- Upload artifacts ----
       - name: Upload bibliography artifacts
