@@ -47,8 +47,12 @@ jobs:
       - name: Set up TinyTeX
         uses: r-lib/actions/setup-tinytex@v2
 
-      - name: Install LaTeX packages
-        run: tlmgr install urlbst
+      - name: Update TinyTeX and install LaTeX packages
+        run: |
+          tlmgr update --self
+          tlmgr install ec
+          tlmgr install cm-super
+          tlmgr install urlbst
 
       - name: Set up pandoc
         uses: r-lib/actions/setup-pandoc@v2
