@@ -75,7 +75,7 @@ public class StatementTypeEditor extends JDialog {
 		super(parent, "Statement type editor", true);
 		this.setModal(true);
 		this.setTitle("Edit statement types");
-		ImageIcon statementTypeIcon = new ImageIcon(getClass().getResource("/icons/tabler-icon-message-2.png"));
+		ImageIcon statementTypeIcon = new SvgIcon("/icons/tabler_message_2.svg", 32).getImageIcon();
 		this.setIconImage(statementTypeIcon.getImage());
 		this.setLayout(new BorderLayout());
 
