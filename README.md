@@ -67,12 +67,13 @@ Previous advice recommended installing DNA 2.0 for data exchange (e.g., adding d
 To install the new rDNA directly from GitHub, try the following code in R:
 
 ``` r
-# install.packages("remotes")
-remotes::install_github("leifeld/dna/rDNA/rDNA@*release",
-                        INSTALL_opts = "--no-multiarch")
+install.packages("https://github.com/leifeld-lab/dna/releases/download/v3.1.1/rDNA_3.1.1.tar.gz",
+                 repos = NULL, type = "source")
 ```
 
 Note that the package relies on `rJava`, which needs to be installed first.
+
+Previous versions recommended installation via the `remotes` package, which no longer works because the jar file is bundled with the rDNA package now.
 
 ## Documentation and community
 
