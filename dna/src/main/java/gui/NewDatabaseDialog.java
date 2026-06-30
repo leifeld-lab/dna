@@ -488,12 +488,18 @@ public class NewDatabaseDialog extends JDialog {
 			}
 			if (connectionValid == true) {
 				cp = testConnection.getConnectionProfile();
+				String msg;
+				if (type.equals("sqlite")) {
+					msg = "SQLite database file created at: " + new File(connectionDetailsPanel.getUrl()).getAbsolutePath();
+				} else {
+					msg = "Remote database created at: " + connectionDetailsPanel.getUrl();
+				}
 				LogEvent l = new LogEvent(Logger.MESSAGE,
-						"[GUI] Data structures were set up in SQLite database.",
-						"Data structures were set up in: " + new File(connectionDetailsPanel.getUrl()).getAbsolutePath());
+						"[GUI] Data structures were set up in database.",
+						msg);
 				Dna.logger.log(l);
 				JOptionPane.showMessageDialog(NewDatabaseDialog.this,
-					    "Data structures were set up in:\n" + new File(connectionDetailsPanel.getUrl()).getAbsolutePath(),
+					    msg,
 					    "Success",
 					    JOptionPane.PLAIN_MESSAGE);
 				progressMonitor.setProgress(3);
