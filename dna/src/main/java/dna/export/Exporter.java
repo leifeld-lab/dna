@@ -2421,7 +2421,7 @@ public class Exporter {
 		} else if (fileFormat.equals("dl")) {
 			exportDL();
 		} else if (fileFormat.equals("graphml")) {
-			exportGraphml();
+			exportGraphml(this.outfile, this.matrixResults, this.statementType, this.variable1, this.variable2, this.networkType, this.filteredStatements, this.variable1Document, this.variable2Document);
 		}
 	}
 
@@ -2626,6 +2626,496 @@ public class Exporter {
 	/**
 	 * Export filter for graphML files.
 	 */
+	private void exportGraphml(final String FILENAME, final ArrayList<Matrix> RESULTS,
+			final StatementType STATEMENTTYPE, final String VARIABLE1, final String VARIABLE2,
+			final String NETWORKTYPE, final ArrayList<ExportStatement> FILTEREDSTATEMENTS,
+			final boolean VARIABLE1DOCUMENT, final boolean VARIABLE2DOCUMENT) {
+
+		try (ProgressBar pb = new ProgressBar("Exporting networks", RESULTS.size())) {
+			pb.stepTo(0);
+
+			// set up file name components for time window (in case this will be required later)
+			String filename2;
+			String filename1 = FILENAME.substring(0, FILENAME.length() - 4);
+			String filename3 = FILENAME.substring(FILENAME.length() - 4, FILENAME.length());
+			DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
+			ArrayList<String> attributeVariables1, attributeVariables2;
+			HashMap<String, Entity> entityMap1 = new HashMap<String, Entity>();
+			HashMap<String, Entity> entityMap2 = new HashMap<String, Entity>();
+			if (VARIABLE1DOCUMENT) {
+				attributeVariables1 = new ArrayList<String>(); // no attribute variables for document-level variables
+			} else {
+				// get variable ID for variable 1
+				int variable1Id = STATEMENTTYPE.getVariables()
+						.stream()
+						.filter(v -> v.getKey().equals(VARIABLE1))
+						.mapToInt(v -> v.getVariableId())
+						.findFirst()
+						.getAsInt();
+				
+				// get attribute variable names for variable 1
+				attributeVariables1 = Dna.sql.getAttributeVariables(variable1Id);
+
+				// get entities with attribute values for variable 1 and save in hash map
+				ArrayList<Integer> var1IdArrayList = new ArrayList<Integer>();
+				var1IdArrayList.add(variable1Id);
+				ArrayList<Entity> entities1 = Dna.sql.getEntities(var1IdArrayList, true).get(0);
+				entities1.stream().forEach(entity -> entityMap1.put(entity.getValue(), entity));
+			}
+			if (VARIABLE2DOCUMENT || NETWORKTYPE.equals("onemode")) {
+				attributeVariables2 = new ArrayList<String>(); // no attribute variables for document-level variables
+			} else {
+				// get variable ID for variable 2
+				int variable2Id = STATEMENTTYPE.getVariables()
+						.stream()
+						.filter(v -> v.getKey().equals(VARIABLE2))
+						.mapToInt(v -> v.getVariableId())
+						.findFirst()
+						.getAsInt();
+				
+				// get attribute variable names for variable 2
+				attributeVariables2 = Dna.sql.getAttributeVariables(variable2Id);
+
+				// get entities with attribute values for variable 2 and save in hash map
+				ArrayList<Integer> var2IdArrayList = new ArrayList<Integer>();
+				var2IdArrayList.add(variable2Id);
+				ArrayList<Entity> entities2 = Dna.sql.getEntities(var2IdArrayList, true).get(0);
+				entities2.stream().forEach(entity -> entityMap2.put(entity.getValue(), entity));
+			}
+
+			Matrix m;
+			for (int k = 0; k < RESULTS.size(); k++) {
+				m = RESULTS.get(k);
+
+				// assemble file name for time window networks if necessary
+				String outputFilename = FILENAME;
+				if (RESULTS.size() > 1) {
+					filename2 = " " + String.format("%0" + String.valueOf(RESULTS.size()).length() + "d", k + 1) + " " + m.getDateTime().format(formatter);
+					outputFilename = filename1 + filename2 + filename3;
+				}
+
+				// frequencies
+				String[] values1 = this.retrieveValues(FILTEREDSTATEMENTS, VARIABLE1, VARIABLE1DOCUMENT);
+				String[] values2 = this.retrieveValues(FILTEREDSTATEMENTS, VARIABLE2, VARIABLE2DOCUMENT);
+				int[] frequencies1 = this.countFrequencies(values1, m.getRowNames());
+				int[] frequencies2 = this.countFrequencies(values2, m.getColumnNames());
+
+				// join names, frequencies, and variable names into long arrays for both modes
+				String[] rn = RESULTS.get(k).getRowNames();
+				String[] cn = RESULTS.get(k).getColumnNames();
+
+				// count edges
+				int numEdges = 0;
+				for (int i = 0; i < rn.length; i++) {
+					for (int j = 0; j < cn.length; j++) {
+						if (m.getMatrix()[i][j] != 0.0 && (NETWORKTYPE.equals("twomode") || (NETWORKTYPE.equals("onemode") && i < j))) {
+							numEdges++;
+						}
+					}
+				}
+
+				// get id and color arrays
+				int[] id1 = new int[rn.length];
+				String[] color1 = new String[rn.length];
+				if (VARIABLE1DOCUMENT) {
+					for (int i = 0; i < rn.length; i++) {
+						id1[i] = i + 1001; // document-level variables do not have entity IDs, so create large IDs
+						color1[i] = "#000000"; // document-level variables do not have entity colors, so use black
+					}
+				} else {
+					id1 = Arrays.stream(rn).mapToInt(s -> entityMap1.get(s).getId()).toArray();
+					color1 = Arrays.stream(rn).map(s -> {
+						Color col = entityMap1.get(s).getColor();
+						return String.format("#%02X%02X%02X", col.getRed(), col.getGreen(), col.getBlue());
+					}).toArray(String[]::new);
+				}
+				int[] id2 = new int[cn.length];
+				String[] color2 = new String[cn.length];
+				if (VARIABLE2DOCUMENT || NETWORKTYPE.equals("onemode")) {
+					for (int i = 0; i < cn.length; i++) {
+						id2[i] = i + 2001; // document-level variables do not have entity IDs, so create large IDs
+						color2[i] = "#000000"; // document-level variables do not have entity colors, so use black
+					}
+				} else {
+					id2 = Arrays.stream(cn).mapToInt(s -> entityMap2.get(s).getId()).toArray();
+					color2 = Arrays.stream(cn).map(s -> {
+						Color col = entityMap2.get(s).getColor();
+						return String.format("#%02X%02X%02X", col.getRed(), col.getGreen(), col.getBlue());
+					}).toArray(String[]::new);
+				}
+
+				// set up graph structure
+				Namespace xmlns = Namespace.getNamespace("http://graphml.graphdrawing.org/xmlns");
+				Element graphml = new Element("graphml", xmlns);
+				Namespace visone = Namespace.getNamespace("visone", "http://visone.info/xmlns");
+				graphml.addNamespaceDeclaration(visone);
+				Namespace xsi = Namespace.getNamespace("xsi", "http://www.w3.org/2001/XMLSchema-instance");
+				graphml.addNamespaceDeclaration(xsi);
+				Namespace yNs = Namespace.getNamespace("y", "http://www.yworks.com/xml/graphml");
+				graphml.addNamespaceDeclaration(yNs);
+				Attribute attSchema = new Attribute("schemaLocation", "http://graphml.graphdrawing.org/xmlns/graphml http://www.yworks.com/xml/schema/graphml/1.0/ygraphml.xsd ", xsi);
+				graphml.setAttribute(attSchema);
+				org.jdom.Document document = new org.jdom.Document(graphml);
+
+				Comment dataSchema = new Comment(" data schema ");
+				graphml.addContent(dataSchema);
+
+				Element keyVisoneNode = new Element("key", xmlns);
+				keyVisoneNode.setAttribute(new Attribute("for", "node"));
+				keyVisoneNode.setAttribute(new Attribute("id", "d0"));
+				keyVisoneNode.setAttribute(new Attribute("yfiles.type", "nodegraphics"));
+				graphml.addContent(keyVisoneNode);
+
+				Element keyVisoneEdge = new Element("key", xmlns);
+				keyVisoneEdge.setAttribute(new Attribute("for", "edge"));
+				keyVisoneEdge.setAttribute(new Attribute("id", "e0"));
+				keyVisoneEdge.setAttribute(new Attribute("yfiles.type", "edgegraphics"));
+				graphml.addContent(keyVisoneEdge);
+
+				Element keyVisoneGraph = new Element("key", xmlns);
+				keyVisoneGraph.setAttribute(new Attribute("for", "graph"));
+				keyVisoneGraph.setAttribute(new Attribute("id", "prop"));
+				keyVisoneGraph.setAttribute(new Attribute("visone.type", "properties"));
+				graphml.addContent(keyVisoneGraph);
+
+				Element keyId = new Element("key", xmlns);
+				keyId.setAttribute(new Attribute("id", "id"));
+				keyId.setAttribute(new Attribute("for", "node"));
+				keyId.setAttribute(new Attribute("attr.name", "id"));
+				keyId.setAttribute(new Attribute("attr.type", "string"));
+				graphml.addContent(keyId);
+
+				Element keyName = new Element("key", xmlns);
+				keyName.setAttribute(new Attribute("id", "name"));
+				keyName.setAttribute(new Attribute("for", "node"));
+				keyName.setAttribute(new Attribute("attr.name", "name"));
+				keyName.setAttribute(new Attribute("attr.type", "string"));
+				graphml.addContent(keyName);
+
+				ArrayList<String> addedAttributes = new ArrayList<String>();
+				if (!VARIABLE1DOCUMENT) {
+					attributeVariables1.stream().forEach(v -> {
+						Element keyAttribute = new Element("key", xmlns);
+						keyAttribute.setAttribute(new Attribute("id", v));
+						keyAttribute.setAttribute(new Attribute("for", "node"));
+						keyAttribute.setAttribute(new Attribute("attr.name", v));
+						keyAttribute.setAttribute(new Attribute("attr.type", "string"));
+						graphml.addContent(keyAttribute);
+						addedAttributes.add(v);
+					});
+				}
+				if (!VARIABLE2DOCUMENT && NETWORKTYPE.equals("twomode")) {
+					attributeVariables2.stream().forEach(v -> {
+						if (!addedAttributes.contains(v)) {
+							Element keyAttribute = new Element("key", xmlns);
+							keyAttribute.setAttribute(new Attribute("id", v));
+							keyAttribute.setAttribute(new Attribute("for", "node"));
+							keyAttribute.setAttribute(new Attribute("attr.name", v));
+							keyAttribute.setAttribute(new Attribute("attr.type", "string"));
+							graphml.addContent(keyAttribute);
+							addedAttributes.add(v);
+						}
+					});
+				}
+
+				Element keyVariable = new Element("key", xmlns);
+				keyVariable.setAttribute(new Attribute("id", "variable"));
+				keyVariable.setAttribute(new Attribute("for", "node"));
+				keyVariable.setAttribute(new Attribute("attr.name", "variable"));
+				keyVariable.setAttribute(new Attribute("attr.type", "string"));
+				graphml.addContent(keyVariable);
+
+				Element keyFrequency = new Element("key", xmlns);
+				keyFrequency.setAttribute(new Attribute("id", "frequency"));
+				keyFrequency.setAttribute(new Attribute("for", "node"));
+				keyFrequency.setAttribute(new Attribute("attr.name", "frequency"));
+				keyFrequency.setAttribute(new Attribute("attr.type", "int"));
+				graphml.addContent(keyFrequency);
+
+				Element keyWeight = new Element("key", xmlns);
+				keyWeight.setAttribute(new Attribute("id", "weight"));
+				keyWeight.setAttribute(new Attribute("for", "edge"));
+				keyWeight.setAttribute(new Attribute("attr.name", "weight"));
+				keyWeight.setAttribute(new Attribute("attr.type", "double"));
+				graphml.addContent(keyWeight);
+
+				Element graphElement = new Element("graph", xmlns);
+				graphElement.setAttribute(new Attribute("edgedefault", "undirected"));
+
+				graphElement.setAttribute(new Attribute("id", "DNA"));
+				int numNodes = rn.length;
+				if (NETWORKTYPE.equals("twomode")) {
+					numNodes = numNodes + cn.length;
+				}
+				graphElement.setAttribute(new Attribute("parse.edges", String.valueOf(numEdges)));
+				graphElement.setAttribute(new Attribute("parse.nodes", String.valueOf(numNodes)));
+				graphElement.setAttribute(new Attribute("parse.order", "free"));
+				Element properties = new Element("data", xmlns);
+				properties.setAttribute(new Attribute("key", "prop"));
+				Element labelAttribute = new Element("labelAttribute", visone);
+				labelAttribute.setAttribute("edgeLabel", "weight");
+				labelAttribute.setAttribute("nodeLabel", "name");
+				properties.addContent(labelAttribute);
+				graphElement.addContent(properties);
+
+				// add nodes
+				Comment nodes = new Comment(" nodes ");
+				graphElement.addContent(nodes);
+
+				// nodes for variable 1 (row names)
+				for (int i = 0; i < rn.length; i++) {
+					Element node = new Element("node", xmlns);
+
+					Element nameElement = new Element("data", xmlns);
+					nameElement.setAttribute(new Attribute("key", "name"));
+					nameElement.setText(rn[i]);
+					node.addContent(nameElement);
+
+					node.setAttribute(new Attribute("id", "n" + id1[i]));
+					Element idElement = new Element("data", xmlns);
+					idElement.setAttribute(new Attribute("key", "id"));
+					idElement.setText(String.valueOf(id1[i]));
+					node.addContent(idElement);
+
+					if (!VARIABLE1DOCUMENT) {
+						for (int j = 0; j < attributeVariables1.size(); j++) {
+							Element element = new Element("data", xmlns);
+							element.setAttribute(new Attribute("key", attributeVariables1.get(j)));
+							element.setText(entityMap1.get(rn[i]).getAttributeValues().get(attributeVariables1.get(j)));
+							node.addContent(element);
+						}
+					}
+
+					Element variableElement = new Element("data", xmlns);
+					variableElement.setAttribute(new Attribute("key", "variable"));
+					variableElement.setText(VARIABLE1);
+					node.addContent(variableElement);
+
+					Element frequency = new Element("data", xmlns);
+					frequency.setAttribute(new Attribute("key", "frequency"));
+					frequency.setText(String.valueOf(frequencies1[i]));
+					node.addContent(frequency);
+
+					Element vis = new Element("data", xmlns);
+					vis.setAttribute(new Attribute("key", "d0"));
+					Element visoneShapeNode = new Element("shapeNode", visone);
+					Element yShapeNode = new Element("ShapeNode", yNs);
+					Element geometry = new Element("Geometry", yNs);
+					geometry.setAttribute(new Attribute("height", "20.0"));
+					geometry.setAttribute(new Attribute("width", "20.0"));
+					geometry.setAttribute(new Attribute("x", String.valueOf(Math.random() * 800)));
+					geometry.setAttribute(new Attribute("y", String.valueOf(Math.random() * 600)));
+					yShapeNode.addContent(geometry);
+					Element fill = new Element("Fill", yNs);
+					fill.setAttribute(new Attribute("color", color1[i]));
+
+					fill.setAttribute(new Attribute("transparent", "false"));
+					yShapeNode.addContent(fill);
+					Element borderStyle = new Element("BorderStyle", yNs);
+					borderStyle.setAttribute(new Attribute("color", "#000000"));
+					borderStyle.setAttribute(new Attribute("type", "line"));
+					borderStyle.setAttribute(new Attribute("width", "1.0"));
+					yShapeNode.addContent(borderStyle);
+
+					Element nodeLabel = new Element("NodeLabel", yNs);
+					nodeLabel.setAttribute(new Attribute("alignment", "center"));
+					nodeLabel.setAttribute(new Attribute("autoSizePolicy", "content"));
+					nodeLabel.setAttribute(new Attribute("backgroundColor", "#FFFFFF"));
+					nodeLabel.setAttribute(new Attribute("fontFamily", "Dialog"));
+					nodeLabel.setAttribute(new Attribute("fontSize", "12"));
+					nodeLabel.setAttribute(new Attribute("fontStyle", "plain"));
+					nodeLabel.setAttribute(new Attribute("hasLineColor", "false"));
+					nodeLabel.setAttribute(new Attribute("height", "19.0"));
+					nodeLabel.setAttribute(new Attribute("modelName", "eight_pos"));
+					nodeLabel.setAttribute(new Attribute("modelPosition", "n"));
+					nodeLabel.setAttribute(new Attribute("textColor", "#000000"));
+					nodeLabel.setAttribute(new Attribute("visible", "true"));
+					nodeLabel.setText(rn[i]);
+					yShapeNode.addContent(nodeLabel);
+
+					Element shape = new Element("Shape", yNs);
+					shape.setAttribute(new Attribute("type", "ellipse"));
+					yShapeNode.addContent(shape);
+					visoneShapeNode.addContent(yShapeNode);
+					vis.addContent(visoneShapeNode);
+					node.addContent(vis);
+
+					graphElement.addContent(node);
+				}
+
+				// nodes for variable 2 (column names)
+				if (NETWORKTYPE.equals("twomode")) {
+					for (int i = 0; i < cn.length; i++) {
+						Element node = new Element("node", xmlns);
+
+						Element nameElement = new Element("data", xmlns);
+						nameElement.setAttribute(new Attribute("key", "name"));
+						nameElement.setText(cn[i]);
+						node.addContent(nameElement);
+
+						node.setAttribute(new Attribute("id", "n" + id2[i]));
+						Element idElement = new Element("data", xmlns);
+						idElement.setAttribute(new Attribute("key", "id"));
+						idElement.setText(String.valueOf(id2[i]));
+						node.addContent(idElement);
+
+						if (!VARIABLE2DOCUMENT) {
+							for (int j = 0; j < attributeVariables2.size(); j++) {
+								Element element = new Element("data", xmlns);
+								element.setAttribute(new Attribute("key", attributeVariables2.get(j)));
+								element.setText(entityMap2.get(cn[i]).getAttributeValues().get(attributeVariables2.get(j)));
+								node.addContent(element);
+							}
+						}
+
+						Element variableElement = new Element("data", xmlns);
+						variableElement.setAttribute(new Attribute("key", "variable"));
+						variableElement.setText(VARIABLE2);
+						node.addContent(variableElement);
+
+						Element frequency = new Element("data", xmlns);
+						frequency.setAttribute(new Attribute("key", "frequency"));
+						frequency.setText(String.valueOf(frequencies2[i]));
+						node.addContent(frequency);
+
+						Element vis = new Element("data", xmlns);
+						vis.setAttribute(new Attribute("key", "d0"));
+						Element visoneShapeNode = new Element("shapeNode", visone);
+						Element yShapeNode = new Element("ShapeNode", yNs);
+						Element geometry = new Element("Geometry", yNs);
+						geometry.setAttribute(new Attribute("height", "20.0"));
+						geometry.setAttribute(new Attribute("width", "20.0"));
+						geometry.setAttribute(new Attribute("x", String.valueOf(Math.random() * 800)));
+						geometry.setAttribute(new Attribute("y", String.valueOf(Math.random() * 600)));
+						yShapeNode.addContent(geometry);
+						Element fill = new Element("Fill", yNs);
+						fill.setAttribute(new Attribute("color", color2[i]));
+
+						fill.setAttribute(new Attribute("transparent", "false"));
+						yShapeNode.addContent(fill);
+						Element borderStyle = new Element("BorderStyle", yNs);
+						borderStyle.setAttribute(new Attribute("color", "#000000"));
+						borderStyle.setAttribute(new Attribute("type", "line"));
+						borderStyle.setAttribute(new Attribute("width", "1.0"));
+						yShapeNode.addContent(borderStyle);
+
+						Element nodeLabel = new Element("NodeLabel", yNs);
+						nodeLabel.setAttribute(new Attribute("alignment", "center"));
+						nodeLabel.setAttribute(new Attribute("autoSizePolicy", "content"));
+						nodeLabel.setAttribute(new Attribute("backgroundColor", "#FFFFFF"));
+						nodeLabel.setAttribute(new Attribute("fontFamily", "Dialog"));
+						nodeLabel.setAttribute(new Attribute("fontSize", "12"));
+						nodeLabel.setAttribute(new Attribute("fontStyle", "plain"));
+						nodeLabel.setAttribute(new Attribute("hasLineColor", "false"));
+						nodeLabel.setAttribute(new Attribute("height", "19.0"));
+						nodeLabel.setAttribute(new Attribute("modelName", "eight_pos"));
+						nodeLabel.setAttribute(new Attribute("modelPosition", "n"));
+						nodeLabel.setAttribute(new Attribute("textColor", "#000000"));
+						nodeLabel.setAttribute(new Attribute("visible", "true"));
+						nodeLabel.setText(cn[i]);
+						yShapeNode.addContent(nodeLabel);
+
+						Element shape = new Element("Shape", yNs);
+						shape.setAttribute(new Attribute("type", "roundrectangle"));
+						yShapeNode.addContent(shape);
+						visoneShapeNode.addContent(yShapeNode);
+						vis.addContent(visoneShapeNode);
+						node.addContent(vis);
+
+						graphElement.addContent(node);
+					}
+				}
+
+				// add edges
+				Comment edges = new Comment(" edges ");
+				graphElement.addContent(edges);
+				for (int i = 0; i < rn.length; i++) {
+					for (int j = 0; j < cn.length; j++) {
+						if (m.getMatrix()[i][j] != 0.0 && (NETWORKTYPE.equals("twomode") || (NETWORKTYPE.equals("onemode") && i < j))) {  // only lower triangle is used for one-mode networks
+							Element edge = new Element("edge", xmlns);
+
+							edge.setAttribute(new Attribute("source", "n" + String.valueOf(id1[i])));
+							if (NETWORKTYPE.equals("twomode")) {
+								edge.setAttribute(new Attribute("target", "n" + String.valueOf(id2[j])));
+							} else {
+								edge.setAttribute(new Attribute("target", "n" + String.valueOf(id1[j])));
+							}
+
+							Element weight = new Element("data", xmlns);
+							weight.setAttribute(new Attribute("key", "weight"));
+							weight.setText(String.valueOf(m.getMatrix()[i][j]));
+							edge.addContent(weight);
+
+							Element visEdge = new Element("data", xmlns);
+							visEdge.setAttribute("key", "e0");
+							Element visPolyLineEdge = new Element("polyLineEdge", visone);
+							Element yPolyLineEdge = new Element("PolyLineEdge", yNs);
+
+							Element yLineStyle = new Element("LineStyle", yNs);
+							if (qualifierAggregation.equals("combine") && dataTypes.get(qualifier).equals("boolean")) {
+								if (m.getMatrix()[i][j] == 1.0) {
+									yLineStyle.setAttribute("color", "#00ff00");
+								} else if (m.getMatrix()[i][j] == 2.0) {
+									yLineStyle.setAttribute("color", "#ff0000");
+								} else if (m.getMatrix()[i][j] == 3.0) {
+									yLineStyle.setAttribute("color", "#0000ff");
+								}
+							} else if (qualifierAggregation.equals("subtract")) {
+								if (m.getMatrix()[i][j] < 0) {
+									yLineStyle.setAttribute("color", "#ff0000");
+								} else if (m.getMatrix()[i][j] > 0) {
+									yLineStyle.setAttribute("color", "#00ff00");
+								}
+							} else if (qualifierAggregation.equals("conflict")) {
+								yLineStyle.setAttribute("color", "#ff0000");
+							} else if (qualifierAggregation.equals("congruence")) {
+								yLineStyle.setAttribute("color", "#00ff00");
+							} else {
+								yLineStyle.setAttribute("color", "#000000");
+							}
+							yLineStyle.setAttribute(new Attribute("type", "line"));
+							yLineStyle.setAttribute(new Attribute("width", "2.0"));
+							yPolyLineEdge.addContent(yLineStyle);
+							visPolyLineEdge.addContent(yPolyLineEdge);
+							visEdge.addContent(visPolyLineEdge);
+							edge.addContent(visEdge);
+
+							graphElement.addContent(edge);
+						}
+					}
+				}
+
+				graphml.addContent(graphElement);
+
+				// write to file
+				File dnaFile = new File(outputFilename);
+				try {
+					FileOutputStream outStream = new FileOutputStream(dnaFile);
+					XMLOutputter outToFile = new XMLOutputter();
+					Format format = Format.getPrettyFormat();
+					format.setEncoding("utf-8");
+					outToFile.setFormat(format);
+					outToFile.output(document, outStream);
+					outStream.flush();
+					outStream.close();
+				} catch (IOException e) {
+					LogEvent l = new LogEvent(Logger.ERROR,
+							"Error while saving visone graphml file.",
+							"Tried to save a matrix to graphml file \"" + dnaFile + "\", but an error occurred. See stack trace.",
+							e);
+					Dna.logger.log(l);
+				}
+				pb.stepTo(k + 1);
+			}
+			pb.stepTo(RESULTS.size());
+		}
+	}
+
+	/**
+	 * Export filter for graphML files.
+	 */
+	/*
 	private void exportGraphml() {
 		try (ProgressBar pb = new ProgressBar("Exporting networks", this.matrixResults.size())) {
 			pb.stepTo(0);
@@ -3023,6 +3513,7 @@ public class Exporter {
 			pb.stepTo(this.matrixResults.size());
 		}
 	}
+	*/
 
 	/**
 	 * Return original (unfiltered) statements.
