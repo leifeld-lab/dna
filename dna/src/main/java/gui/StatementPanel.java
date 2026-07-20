@@ -419,10 +419,16 @@ class StatementPanel extends JPanel {
 				return false;
 			} else {
 				// check ID field for a non-match
-				Pattern pattern = Pattern.compile(idFieldPattern);
-				Matcher m = pattern.matcher(String.valueOf((int) s.getId()));
-				if (!m.find()) {
-					return false;
+				Pattern pattern;
+				Matcher m;
+				try {
+					pattern = Pattern.compile(idFieldPattern);
+					m = pattern.matcher(String.valueOf((int) s.getId()));
+					if (!m.find()) {
+						return false;
+					}
+				} catch (PatternSyntaxException pse) {
+					return true;
 				}
 				// check variables for a non-match 
 				for (int i = 0; i < variables.size(); i++) {
