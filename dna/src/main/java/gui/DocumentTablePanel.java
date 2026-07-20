@@ -100,7 +100,7 @@ class DocumentTablePanel extends JPanel {
 					Matcher matcherSource = pattern.matcher(d.getSource());
 					Matcher matcherSection = pattern.matcher(d.getSection());
 					Matcher matcherType = pattern.matcher(d.getType());
-					Matcher matcherNotes = pattern.matcher(d.getTitle());
+					Matcher matcherNotes = pattern.matcher(d.getNotes());
 					DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd MM yyyy HH:mm");
 					Matcher matcherDateTime = pattern.matcher(d.getDateTime().format(formatter));
 					Matcher matcherCoderName = pattern.matcher(d.getCoder().getName());
