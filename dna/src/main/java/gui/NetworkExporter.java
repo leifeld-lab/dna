@@ -1132,6 +1132,7 @@ public class NetworkExporter extends JDialog {
 
 		private Exporter exporter;
 		private String fileName;
+		private String timeWindow;
 		private ProgressMonitor progressMonitor;
 		
 		public GuiExportThread(
@@ -1164,6 +1165,7 @@ public class NetworkExporter extends JDialog {
 				String fileFormat,
 				String outfile) {
 			this.fileName = outfile;
+			this.timeWindow = timeWindow;
 			this.exporter = new Exporter(
 					networkType,
 					statementType,
@@ -1236,7 +1238,11 @@ public class NetworkExporter extends JDialog {
 			progressMonitor.setNote("(4/4) Writing to file...");
 			exporter.exportToFile();
 			progressMonitor.setProgress(4);
-			JOptionPane.showMessageDialog(NetworkExporter.this, "Data were exported to \"" + fileName + "\".");
+			if (this.timeWindow.equals("no")) {
+				JOptionPane.showMessageDialog(NetworkExporter.this, "Data were exported to \"" + fileName + "\".");
+			} else {
+				JOptionPane.showMessageDialog(NetworkExporter.this, "Data were exported. Multiple time window files were created based on \"" + fileName + "\".");
+			}
 		}
 	}
 }
