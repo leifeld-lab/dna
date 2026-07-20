@@ -2435,7 +2435,7 @@ public class Exporter {
 		try (ProgressBar pb = new ProgressBar("Exporting events", this.filteredStatements.size())) {
 			pb.stepTo(0);
 			String key;
-			DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+			DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH-mm-ss");
 			try {
 				BufferedWriter out = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(this.outfile), "UTF-8"));
 				out.write("\"statement_id\";\"time\"");
@@ -2494,9 +2494,10 @@ public class Exporter {
 		try (ProgressBar pb = new ProgressBar("Exporting networks", this.matrixResults.size())) {
 			pb.stepTo(0);
 			String filename2;
-			String filename1 = this.outfile.substring(0, this.outfile.length() - 4);
-			String filename3 = this.outfile.substring(this.outfile.length() - 4, this.outfile.length());
-			DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+			int dotIndex = this.outfile.lastIndexOf('.');
+			String filename1 = this.outfile.substring(0, dotIndex);
+			String filename3 = this.outfile.substring(dotIndex);
+			DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH-mm-ss");
 			for (int k = 0; k < this.matrixResults.size(); k++) {
 				// assemble file name for time window networks if necessary
 				String filename = this.outfile;
@@ -2551,9 +2552,10 @@ public class Exporter {
 		try (ProgressBar pb = new ProgressBar("Exporting networks", this.matrixResults.size())) {
 			pb.stepTo(0);
 			String filename2;
-			String filename1 = this.outfile.substring(0, this.outfile.length() - 4);
-			String filename3 = this.outfile.substring(this.outfile.length() - 4, this.outfile.length());
-			DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+			int dotIndex = this.outfile.lastIndexOf('.');
+			String filename1 = this.outfile.substring(0, dotIndex);
+			String filename3 = this.outfile.substring(dotIndex);
+			DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH-mm-ss");
 			for (int k = 0; k < this.matrixResults.size(); k++) {
 				// assemble file name for time window networks if necessary
 				String filename = this.outfile;
@@ -2636,9 +2638,10 @@ public class Exporter {
 
 			// set up file name components for time window (in case this will be required later)
 			String filename2;
-			String filename1 = FILENAME.substring(0, FILENAME.length() - 4);
-			String filename3 = FILENAME.substring(FILENAME.length() - 4, FILENAME.length());
-			DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+			int dotIndex = FILENAME.lastIndexOf('.');
+			String filename1 = FILENAME.substring(0, dotIndex);
+			String filename3 = FILENAME.substring(dotIndex);
+			DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH-mm-ss");
 
 			ArrayList<String> attributeVariables1, attributeVariables2;
 			HashMap<String, Entity> entityMap1 = new HashMap<String, Entity>();
