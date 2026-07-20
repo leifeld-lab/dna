@@ -351,9 +351,15 @@ public class SearchDialog extends JDialog implements DocumentTablePanel.Document
 					.collect(Collectors.joining(", "))
 					.toString();
 			
-			try (Connection conn = Dna.sql.getDataSource().getConnection();
-					PreparedStatement s = conn.prepareStatement("SELECT ID, Date, Title, Text FROM DOCUMENTS WHERE Text LIKE '%" + regex + "%' AND CODER IN (" + ids + ");");
-					ResultSet rs = s.executeQuery();) {
+		String sql;
+		if (regex.matches(".*[|()\\[\\]{}\\*+?.^$\\\\].*")) {
+			sql = "SELECT ID, Date, Title, Text FROM DOCUMENTS WHERE CODER IN (" + ids + ");";
+		} else {
+			sql = "SELECT ID, Date, Title, Text FROM DOCUMENTS WHERE Text LIKE '%" + regex + "%' AND CODER IN (" + ids + ");";
+		}
+		try (Connection conn = Dna.sql.getDataSource().getConnection();
+				PreparedStatement s = conn.prepareStatement(sql);
+				ResultSet rs = s.executeQuery();) {
 				String text, title, match;
 				int documentId, start, stop;
 				LocalDateTime date;
