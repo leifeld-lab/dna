@@ -216,6 +216,19 @@ public class MainWindow extends JFrame {
 		actionSearchDialog.setEnabled(false);
 		this.getRootPane().getInputMap(JRootPane.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke("control F"),	"open search dialog");
 		this.getRootPane().getActionMap().put("open search dialog", actionSearchDialog);
+		
+		// keyboard shortcuts for statement type creation (Ctrl+1 through Ctrl+9)
+		for (int i = 1; i <= 9; i++) {
+			final int index = i - 1;
+			String key = "createStatementType" + i;
+			this.getRootPane().getInputMap(JRootPane.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke("control " + i), key);
+			this.getRootPane().getActionMap().put(key, new AbstractAction() {
+				private static final long serialVersionUID = 1L;
+				public void actionPerformed(ActionEvent e) {
+					createStatementFromSelection(index);
+				}
+			});
+		}
 
 		ImageIcon recodeStatementsIcon = new ImageIcon(new ImageIcon(getClass().getResource("/icons/tabler-icon-pencil.png")).getImage().getScaledInstance(18, 18, Image.SCALE_SMOOTH));
 		actionRecodeStatements = new ActionRecodeStatements("Edit multiple statements...", recodeStatementsIcon, "Recode the statements currently selected in the statement table", KeyEvent.VK_R);
@@ -496,6 +509,7 @@ public class MainWindow extends JFrame {
 				ArrayList<StatementType> statementTypes = Dna.sql.getStatementTypes();
 				for (int i = 0; i < statementTypes.size(); i++) {
 					StatementType statementType = statementTypes.get(i);
+					final int stIndex = i;
 					JMenuItem menuItem = new JMenuItem("Format as " + statementType.getLabel());
 					menuItem.setOpaque(true);
 					menuItem.setBackground(statementType.getColor().toAWTColor());
@@ -504,29 +518,7 @@ public class MainWindow extends JFrame {
 					menuItem.addActionListener(new ActionListener() {
 						@Override
 						public void actionPerformed(ActionEvent e) {
-							int documentId = documentTablePanel.getSelectedDocumentId();
-							int selectionStart = textWindow.getSelectionStart();
-							int selectionEnd = textWindow.getSelectionEnd();
-							Statement statement = new Statement(selectionStart,
-									selectionEnd,
-									statementType.getId(),
-									Dna.sql.getActiveCoder().getId(),
-									statementType.getVariables(),
-									documentId);
-							int statementId = Dna.sql.addStatement(statement);
-							if (statementId > 0) {
-								documentTableModel.increaseFrequency(documentId);
-								textPanel.paintStatements();
-								textWindow.setCaretPosition(selectionEnd);
-								
-								// retrieve added statement, add to statement table, and open popup
-								Statement s = Dna.sql.getStatement(statementId);
-								statementTableModel.addRow(s);
-								Point location = textWindow.getLocationOnScreen();
-								textWindow.setSelectionStart(statement.getStart());
-								textWindow.setSelectionEnd(statement.getStop());
-								newPopup(x, y, s, location);
-							}
+							createStatementFromSelection(stIndex);
 						}
 					});
 					
@@ -747,6 +739,79 @@ public class MainWindow extends JFrame {
 	 * @param s           The statement to show.
 	 * @param location    The location of the popup window.
 	 */
+	/**
+	 * Create a statement from the currently selected text using the statement
+	 * type at the given index. Opens the popup dialog for editing the
+	 * statement variables if successful.
+	 * 
+	 * @param statementTypeIndex  Index of the statement type (0-based).
+	 */
+	private void createStatementFromSelection(int statementTypeIndex) {
+		if (popup != null && popup.isValid()) {
+			return;
+		}
+		JTextPane textWindow = textPanel.getTextWindow();
+		if (textWindow.getSelectedText() == null) {
+			return;
+		}
+		if (Dna.sql.getActiveCoder() == null) {
+			return;
+		}
+		if (!Dna.sql.getActiveCoder().isPermissionAddStatements()) {
+			return;
+		}
+		int documentId = documentTablePanel.getSelectedDocumentId();
+		if (documentId < 0) {
+			return;
+		}
+		
+		// check document-level permissions
+		int documentCoderId = documentTableModel.getRow(documentTablePanel.getDocumentTable().convertRowIndexToModel(documentTablePanel.getDocumentTable().getSelectedRow())).getCoder().getId();
+		if (documentCoderId != Dna.sql.getActiveCoder().getId() && !Dna.sql.getActiveCoder().isPermissionEditOthersDocuments()) {
+			return;
+		}
+		if (documentCoderId != Dna.sql.getActiveCoder().getId() && !Dna.sql.getActiveCoder().isPermissionEditOthersDocuments(documentCoderId)) {
+			return;
+		}
+		
+		ArrayList<StatementType> statementTypes = Dna.sql.getStatementTypes();
+		if (statementTypeIndex < 0 || statementTypeIndex >= statementTypes.size()) {
+			return;
+		}
+		
+		StatementType st = statementTypes.get(statementTypeIndex);
+		int selectionStart = textWindow.getSelectionStart();
+		int selectionEnd = textWindow.getSelectionEnd();
+		
+		Statement statement = new Statement(selectionStart,
+				selectionEnd,
+				st.getId(),
+				Dna.sql.getActiveCoder().getId(),
+				st.getVariables(),
+				documentId);
+		int statementId = Dna.sql.addStatement(statement);
+		if (statementId > 0) {
+			documentTableModel.increaseFrequency(documentId);
+			textPanel.paintStatements();
+			textWindow.setCaretPosition(selectionEnd);
+			
+			Statement s = Dna.sql.getStatement(statementId);
+			statementTableModel.addRow(s);
+			Point location = textWindow.getLocationOnScreen();
+			textWindow.setSelectionStart(statement.getStart());
+			textWindow.setSelectionEnd(statement.getStop());
+			
+			// compute popup position from selection start
+			try {
+				@SuppressWarnings("deprecation")
+				Rectangle2D r = textWindow.modelToView(selectionStart);
+				newPopup(r.getX(), r.getY(), s, location);
+			} catch (BadLocationException e) {
+				newPopup(100, 100, s, location);
+			}
+		}
+	}
+
 	private void newPopup(double x, double y, Statement s, Point location) {
 		
 		// determine coders for the coder combo box in the popup window
