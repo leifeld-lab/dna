@@ -40,7 +40,10 @@ import model.Coder;
 import model.Statement;
 import model.StatementType;
 import model.TableDocument;
+import model.Regex;
 import model.Value;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import sql.ConnectionProfile;
 import sql.Sql;
 
@@ -606,6 +609,14 @@ public class MainWindow extends JFrame {
 						newPopup(p.getX(), p.getY(), s, location);
 					}
 				}
+			}			});
+
+		// keyboard shortcut: Space to jump to next regex match in text
+		textWindow.getInputMap(JComponent.WHEN_FOCUSED).put(KeyStroke.getKeyStroke("SPACE"), "jumpToNextRegex");
+		textWindow.getActionMap().put("jumpToNextRegex", new AbstractAction() {
+			private static final long serialVersionUID = 1L;
+			public void actionPerformed(ActionEvent e) {
+				jumpToNextRegexMatch();
 			}
 		});
 
@@ -770,6 +781,61 @@ public class MainWindow extends JFrame {
 	 * 
 	 * @param statementTypeIndex  Index of the statement type (0-based).
 	 */
+	/**
+	 * Jump the text cursor to the next regex match after the current caret
+	 * position and scroll to make it visible.
+	 */
+	private void jumpToNextRegexMatch() {
+		JTextPane textWindow = textPanel.getTextWindow();
+		String text = textWindow.getText();
+		if (text == null || text.isEmpty()) {
+			return;
+		}
+		ArrayList<Regex> regexes = Dna.sql.getRegexes();
+		if (regexes == null || regexes.isEmpty()) {
+			return;
+		}
+		int caretPos = textWindow.getCaretPosition();
+		int bestStart = Integer.MAX_VALUE;
+		int bestEnd = -1;
+		for (Regex regex : regexes) {
+			Pattern p = Pattern.compile(regex.getLabel(), Pattern.CASE_INSENSITIVE);
+			Matcher m = p.matcher(text);
+			while (m.find()) {
+				int start = m.start();
+				if (start > caretPos && start < bestStart) {
+					bestStart = start;
+					bestEnd = m.end();
+				}
+			}
+		}
+		if (bestStart == Integer.MAX_VALUE) {
+			// wrap around: restart search from beginning
+			for (Regex regex : regexes) {
+				Pattern p = Pattern.compile(regex.getLabel(), Pattern.CASE_INSENSITIVE);
+				Matcher m = p.matcher(text);
+				if (m.find()) {
+					int start = m.start();
+					if (start < bestStart) {
+						bestStart = start;
+						bestEnd = m.end();
+					}
+				}
+			}
+		}
+		if (bestStart != Integer.MAX_VALUE) {
+			textWindow.setCaretPosition(bestEnd);
+			textWindow.moveCaretPosition(bestStart);
+			try {
+				@SuppressWarnings("deprecation")
+				Rectangle2D r = textWindow.modelToView(bestStart);
+				textWindow.scrollRectToVisible(new Rectangle((int) r.getX(), (int) r.getY(), (int) r.getWidth(), (int) r.getHeight()));
+			} catch (BadLocationException ex) {
+				// ignore and don't scroll
+			}
+		}
+	}
+
 	private void createStatementFromSelection(int statementTypeIndex) {
 		if (popup != null && popup.isValid()) {
 			return;
