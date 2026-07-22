@@ -229,6 +229,30 @@ public class MainWindow extends JFrame {
 				}
 			});
 		}
+		
+		// keyboard shortcuts for document navigation (Page Up / Page Down)
+		this.getRootPane().getInputMap(JRootPane.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke("PAGE_DOWN"), "nextDocument");
+		this.getRootPane().getActionMap().put("nextDocument", new AbstractAction() {
+			private static final long serialVersionUID = 1L;
+			public void actionPerformed(ActionEvent e) {
+				JTable dt = documentTablePanel.getDocumentTable();
+				int row = dt.getSelectedRow();
+				if (row >= 0 && row < dt.getRowCount() - 1) {
+					dt.setRowSelectionInterval(row + 1, row + 1);
+				}
+			}
+		});
+		this.getRootPane().getInputMap(JRootPane.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke("PAGE_UP"), "previousDocument");
+		this.getRootPane().getActionMap().put("previousDocument", new AbstractAction() {
+			private static final long serialVersionUID = 1L;
+			public void actionPerformed(ActionEvent e) {
+				JTable dt = documentTablePanel.getDocumentTable();
+				int row = dt.getSelectedRow();
+				if (row > 0) {
+					dt.setRowSelectionInterval(row - 1, row - 1);
+				}
+			}
+		});
 
 		ImageIcon recodeStatementsIcon = new ImageIcon(new ImageIcon(getClass().getResource("/icons/tabler-icon-pencil.png")).getImage().getScaledInstance(18, 18, Image.SCALE_SMOOTH));
 		actionRecodeStatements = new ActionRecodeStatements("Edit multiple statements...", recodeStatementsIcon, "Recode the statements currently selected in the statement table", KeyEvent.VK_R);
