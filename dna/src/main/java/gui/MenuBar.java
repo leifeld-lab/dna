@@ -24,6 +24,7 @@ import gui.MainWindow.ActionCloseDatabase;
 import gui.MainWindow.ActionCoderManager;
 import gui.MainWindow.ActionCoderRelationsEditor;
 import gui.MainWindow.ActionCreateDatabase;
+import gui.MainWindow.ActionCsvImportDocuments;
 import gui.MainWindow.ActionEditDocuments;
 import gui.MainWindow.ActionImporter;
 import gui.MainWindow.ActionLoggerDialog;
@@ -67,6 +68,7 @@ public class MenuBar extends JMenuBar {
 	 * @param actionRemoveDocuments       Action for removing documents.
 	 * @param actionEditDocuments         Action for editing documents.
 	 * @param actionBatchImportDocuments  Action for batch-importing documents.
+	 * @param actionCsvImportDocuments    Action for importing from CSV.
 	 * @param actionImporter              Action for importing from database.
 	 * @param actionSearchDialog          Action for regex text search.
 	 * @param actionRefresh               Action for reloading data.
@@ -92,6 +94,7 @@ public class MenuBar extends JMenuBar {
 			ActionRemoveDocuments actionRemoveDocuments,
 			ActionEditDocuments actionEditDocuments,
 			ActionBatchImportDocuments actionBatchImportDocuments,
+			ActionCsvImportDocuments actionCsvImportDocuments,
 			ActionImporter actionImporter,
 			ActionSearchDialog actionSearchDialog,
 			ActionRefresh actionRefresh,
@@ -160,6 +163,10 @@ public class MenuBar extends JMenuBar {
 		// document menu: batch import documents
 		JMenuItem batchImportDocumentsItem = new JMenuItem(actionBatchImportDocuments);
 		documentMenu.add(batchImportDocumentsItem);
+
+		// document menu: import from CSV file
+		JMenuItem csvImportItem = new JMenuItem(actionCsvImportDocuments);
+		documentMenu.add(csvImportItem);
 
 		// document menu: import from other DNA database
 		JMenuItem importerItem = new JMenuItem(actionImporter);
