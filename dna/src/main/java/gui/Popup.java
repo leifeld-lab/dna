@@ -10,14 +10,17 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.Point;
+import java.awt.event.ActionEvent;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+import javax.swing.AbstractAction;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
+import javax.swing.JComponent;
 import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -27,6 +30,7 @@ import javax.swing.JSeparator;
 import javax.swing.JSpinner;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
+import javax.swing.KeyStroke;
 import javax.swing.border.LineBorder;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
@@ -404,6 +408,31 @@ class Popup extends JDialog {
 		int x = (int) xDouble + 6;
 		int y = (int) yDouble + 13;
 		this.setLocation(x, y);
+		
+		// keyboard navigation: Esc to close, Enter to save
+		JComponent rootPane = this.getRootPane();
+		rootPane.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke("ESCAPE"), "popupEscape");
+		rootPane.getActionMap().put("popupEscape", new AbstractAction() {
+			private static final long serialVersionUID = 1L;
+			public void actionPerformed(ActionEvent e) {
+				if (windowDecoration && cancelButton != null) {
+					cancelButton.doClick();
+				} else {
+					dispose();
+				}
+			}
+		});
+		rootPane.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke("ENTER"), "popupEnter");
+		rootPane.getActionMap().put("popupEnter", new AbstractAction() {
+			private static final long serialVersionUID = 1L;
+			public void actionPerformed(ActionEvent e) {
+				if (windowDecoration && editable && saveButton != null) {
+					saveButton.doClick();
+				} else if (!windowDecoration && editable) {
+					dispose(); // triggers focus-lost save listener in MainWindow
+				}
+			}
+		});
 	}
 	
 	/**
