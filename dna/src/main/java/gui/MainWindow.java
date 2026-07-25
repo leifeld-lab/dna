@@ -619,6 +619,51 @@ public class MainWindow extends JFrame {
 				jumpToNextRegexMatch();
 			}
 		});
+		
+		// keyboard shortcut: Escape in text pane → focus document table
+		textWindow.getInputMap(JComponent.WHEN_FOCUSED).put(KeyStroke.getKeyStroke("ESCAPE"), "textEscape");
+		textWindow.getActionMap().put("textEscape", new AbstractAction() {
+			private static final long serialVersionUID = 1L;
+			public void actionPerformed(ActionEvent e) {
+				if (popup == null || !popup.isValid()) {
+					documentTable.requestFocusInWindow();
+				}
+			}
+		});
+		
+		// keyboard shortcuts: Ctrl+Up/Down to navigate statements, Ctrl+Enter to open popup
+		textWindow.getInputMap(JComponent.WHEN_FOCUSED).put(KeyStroke.getKeyStroke("control UP"), "prevStatement");
+		textWindow.getActionMap().put("prevStatement", new AbstractAction() {
+			private static final long serialVersionUID = 1L;
+			public void actionPerformed(ActionEvent e) {
+				navigateStatement(-1);
+			}
+		});
+		textWindow.getInputMap(JComponent.WHEN_FOCUSED).put(KeyStroke.getKeyStroke("control DOWN"), "nextStatement");
+		textWindow.getActionMap().put("nextStatement", new AbstractAction() {
+			private static final long serialVersionUID = 1L;
+			public void actionPerformed(ActionEvent e) {
+				navigateStatement(1);
+			}
+		});
+		textWindow.getInputMap(JComponent.WHEN_FOCUSED).put(KeyStroke.getKeyStroke("control ENTER"), "openStatementPopup");
+		textWindow.getActionMap().put("openStatementPopup", new AbstractAction() {
+			private static final long serialVersionUID = 1L;
+			public void actionPerformed(ActionEvent e) {
+				openCurrentStatementPopup();
+			}
+		});
+		
+		// keyboard shortcut: Enter in document table → focus text pane
+		documentTable.getInputMap(JComponent.WHEN_FOCUSED).put(KeyStroke.getKeyStroke("ENTER"), "enterDocument");
+		documentTable.getActionMap().put("enterDocument", new AbstractAction() {
+			private static final long serialVersionUID = 1L;
+			public void actionPerformed(ActionEvent e) {
+				if (documentTable.getSelectedRowCount() > 0) {
+					textWindow.grabFocus();
+				}
+			}
+		});
 
 		// toolbar document filter field listener
 		JTextField documentFilterField = toolbar.getDocumentFilterField();
@@ -817,6 +862,100 @@ public class MainWindow extends JFrame {
 				textWindow.scrollRectToVisible(new Rectangle((int) r.getX(), (int) r.getY(), (int) r.getWidth(), (int) r.getHeight()));
 			} catch (BadLocationException ex) {
 				// ignore and don't scroll
+			}
+		}
+	}
+
+	/**
+	 * Navigate to the previous or next statement in the current document's text.
+	 * Selects the statement text and scrolls to make it visible.
+	 * 
+	 * @param direction  -1 for previous statement, 1 for next statement.
+	 */
+	private void navigateStatement(int direction) {
+		JTextPane textWindow = textPanel.getTextWindow();
+		int caretPos = textWindow.getCaretPosition();
+		int documentId = documentTablePanel.getSelectedDocumentId();
+		if (documentId < 0 || Dna.sql.getActiveCoder() == null) return;
+		
+		List<Statement> statements = statementTableModel.getRows().stream()
+			.filter(s -> s.getDocumentId() == documentId)
+			.filter(s -> s.getCoderId() == Dna.sql.getActiveCoder().getId() || Dna.sql.getActiveCoder().isPermissionViewOthersStatements())
+			.filter(s -> s.getCoderId() == Dna.sql.getActiveCoder().getId() || Dna.sql.getActiveCoder().getCoderRelations().get(s.getCoderId()).isViewStatements())
+			.sorted((a, b) -> Integer.compare(a.getStart(), b.getStart()))
+			.collect(Collectors.toList());
+		
+		if (statements.isEmpty()) return;
+		
+		Statement target = null;
+		if (direction < 0) {
+			// find the statement that ends strictly before caret, closest to caret
+			for (int i = statements.size() - 1; i >= 0; i--) {
+				if (statements.get(i).getStop() < caretPos) {
+					target = statements.get(i);
+					break;
+				}
+			}
+			// wrap around: if no statement before caret, pick last
+			if (target == null && !statements.isEmpty()) {
+				target = statements.get(statements.size() - 1);
+			}
+		} else {
+			// find the first statement that starts after caret
+			for (Statement s : statements) {
+				if (s.getStart() > caretPos) {
+					target = s;
+					break;
+				}
+			}
+			// wrap around: if no statement after caret, pick first
+			if (target == null && !statements.isEmpty()) {
+				target = statements.get(0);
+			}
+		}
+		
+		if (target != null) {
+			textWindow.select(target.getStart(), target.getStop());
+			textWindow.setCaretPosition(target.getStop());
+			try {
+				@SuppressWarnings("deprecation")
+				Rectangle2D r = textWindow.modelToView(target.getStart());
+				textWindow.scrollRectToVisible(new Rectangle((int) r.getX(), (int) r.getY(), (int) r.getWidth(), (int) r.getHeight()));
+			} catch (BadLocationException ex) {
+				// ignore
+			}
+		}
+	}
+	
+	/**
+	 * Open the statement popup for the statement currently under the caret.
+	 * Only works when a popup is not already open.
+	 */
+	private void openCurrentStatementPopup() {
+		if (popup != null && popup.isValid()) return;
+		
+		JTextPane textWindow = textPanel.getTextWindow();
+		int pos = textWindow.getCaretPosition();
+		int documentId = documentTablePanel.getSelectedDocumentId();
+		if (documentId < 0) return;
+		
+		List<Statement> currentStatements = statementTableModel.getRows().stream()
+			.filter(s -> s.getDocumentId() == documentId)
+			.filter(s -> s.getStart() <= pos && s.getStop() >= pos)
+			.filter(s -> s.getCoderId() == Dna.sql.getActiveCoder().getId() || Dna.sql.getActiveCoder().isPermissionViewOthersStatements())
+			.filter(s -> s.getCoderId() == Dna.sql.getActiveCoder().getId() || Dna.sql.getActiveCoder().getCoderRelations().get(s.getCoderId()).isViewStatements())
+			.collect(Collectors.toList());
+		
+		if (!currentStatements.isEmpty() && Dna.sql.getActiveCoder() != null) {
+			Statement s = Dna.sql.getStatement(currentStatements.get(0).getId());
+			Point location = textWindow.getLocationOnScreen();
+			textWindow.select(s.getStart(), s.getStop());
+			try {
+				@SuppressWarnings("deprecation")
+				Rectangle2D r = textWindow.modelToView(s.getStart());
+				newPopup(r.getX(), r.getY(), s, location);
+			} catch (BadLocationException e) {
+				newPopup(100, 100, s, location);
 			}
 		}
 	}
