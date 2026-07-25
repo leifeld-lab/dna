@@ -208,7 +208,7 @@ public class MainWindow extends JFrame {
 		actionBatchImportDocuments = new ActionBatchImportDocuments("Import from directory", batchImportDocumentsIcon, "Batch-import all text files from a folder as new documents", KeyEvent.VK_I);
 		actionBatchImportDocuments.setEnabled(false);
 
-		ImageIcon csvImportIcon = new ImageIcon(new ImageIcon(getClass().getResource("/icons/tabler-icon-file-import.png")).getImage().getScaledInstance(18, 18, Image.SCALE_SMOOTH));
+		ImageIcon csvImportIcon = new SvgIcon("/icons/tabler_filter_plus.svg", 18).getImageIcon();
 		actionCsvImportDocuments = new ActionCsvImportDocuments("Import from CSV...", csvImportIcon, "Import documents from a CSV file with column-to-field mapping", KeyEvent.VK_V);
 		actionCsvImportDocuments.setEnabled(false);
 

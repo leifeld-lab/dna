@@ -16,6 +16,7 @@ import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
@@ -89,7 +90,7 @@ public class CsvImporter extends JDialog {
 	public CsvImporter() {
 		this.setModal(true);
 		this.setTitle("Import CSV file...");
-		ImageIcon tableAddIcon = new ImageIcon(getClass().getResource("/icons/tabler-icon-file-import.png"));
+		ImageIcon tableAddIcon = new SvgIcon("/icons/tabler_filter_plus.svg", 32).getImageIcon();
 		this.setIconImage(tableAddIcon.getImage());
 		this.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 		this.setLayout(new BorderLayout());
@@ -100,21 +101,31 @@ public class CsvImporter extends JDialog {
 		Dna.logger.log(l);
 		
 		// --- Top: file selector ---
-		JPanel filePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+		JPanel filePanel = new JPanel(new BorderLayout(5, 0));
 		TitledBorder tbFile = new TitledBorder(new EtchedBorder(), "CSV file");
 		tbFile.setTitleJustification(TitledBorder.LEFT);
 		filePanel.setBorder(tbFile);
 		
 		JTextField filePathField = new JTextField(50);
 		filePathField.setEditable(false);
-		filePanel.add(filePathField);
+		filePathField.setToolTipText("Path to the selected CSV file.");
+		filePanel.add(filePathField, BorderLayout.CENTER);
 		
-		ImageIcon folderIcon = new ImageIcon(new ImageIcon(getClass().getResource("/icons/tabler-icon-folder.png")).getImage().getScaledInstance(18, 18, java.awt.Image.SCALE_SMOOTH));
+		ImageIcon folderIcon = new SvgIcon("/icons/tabler_plus.svg", 18).getImageIcon();
 		JButton browseButton = new JButton("Browse...", folderIcon);
 		browseButton.setToolTipText("Select a CSV file to import.");
-		filePanel.add(browseButton);
+		filePanel.add(browseButton, BorderLayout.EAST);
 		
 		this.add(filePanel, BorderLayout.NORTH);
+		
+		// Column separator selector
+		JPanel separatorPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+		separatorPanel.add(new JLabel("Separator:"));
+		JComboBox<String> separatorCombo = new JComboBox<>(new String[]{",", ";", "\t", "|"});
+		separatorCombo.setEditable(true);
+		separatorCombo.setToolTipText("Column separator character used in the CSV file. Common: comma (,), semicolon (;), tab.");
+		separatorPanel.add(separatorCombo);
+		separatorPanel.setToolTipText("Select the character that separates columns in your CSV file.");
 		
 		// --- Center: mapping panel ---
 		JPanel mappingPanel = new JPanel(new GridBagLayout());
@@ -125,110 +136,142 @@ public class CsvImporter extends JDialog {
 		GridBagConstraints gbc = new GridBagConstraints();
 		gbc.fill = GridBagConstraints.HORIZONTAL;
 		gbc.insets = new java.awt.Insets(2, 5, 2, 5);
+		gbc.weightx = 0.0;
 		
 		// Headers
 		gbc.gridx = 0; gbc.gridy = 0;
+		gbc.weightx = 0.0;
 		mappingPanel.add(new JLabel("DNA field"), gbc);
 		gbc.gridx = 1; gbc.gridy = 0;
+		gbc.weightx = 1.0;
 		mappingPanel.add(new JLabel("CSV column"), gbc);
 		gbc.gridx = 2; gbc.gridy = 0;
+		gbc.weightx = 0.5;
 		mappingPanel.add(new JLabel("Fixed value"), gbc);
 		
 		// Title
 		gbc.gridx = 0; gbc.gridy = 1;
+		gbc.weightx = 0.0;
 		mappingPanel.add(new JLabel("Title:"), gbc);
 		gbc.gridx = 1; gbc.gridy = 1;
+		gbc.weightx = 1.0;
 		titleCombo = new JComboBox<>();
 		titleCombo.setToolTipText("Map a CSV column to the document title, or use a fixed value.");
 		mappingPanel.add(titleCombo, gbc);
 		gbc.gridx = 2; gbc.gridy = 1;
+		gbc.weightx = 0.5;
 		titleFixedField = new JTextField(20);
 		titleFixedField.setEnabled(false);
 		mappingPanel.add(titleFixedField, gbc);
 		
 		// Text (required)
 		gbc.gridx = 0; gbc.gridy = 2;
+		gbc.weightx = 0.0;
 		mappingPanel.add(new JLabel("Text:*"), gbc);
 		gbc.gridx = 1; gbc.gridy = 2;
+		gbc.weightx = 1.0;
 		textCombo = new JComboBox<>();
 		textCombo.setToolTipText("Map a CSV column to the document text. Required.");
 		mappingPanel.add(textCombo, gbc);
 		gbc.gridx = 2; gbc.gridy = 2;
+		gbc.weightx = 0.5;
 		mappingPanel.add(new JLabel("(required)"), gbc);
 		
 		// Author
 		gbc.gridx = 0; gbc.gridy = 3;
+		gbc.weightx = 0.0;
 		mappingPanel.add(new JLabel("Author:"), gbc);
 		gbc.gridx = 1; gbc.gridy = 3;
+		gbc.weightx = 1.0;
 		authorCombo = new JComboBox<>();
 		authorCombo.setToolTipText("Map a CSV column to the document author, or use a fixed value.");
 		mappingPanel.add(authorCombo, gbc);
 		gbc.gridx = 2; gbc.gridy = 3;
+		gbc.weightx = 0.5;
 		authorFixedField = new JTextField(20);
 		authorFixedField.setEnabled(false);
 		mappingPanel.add(authorFixedField, gbc);
 		
 		// Source
 		gbc.gridx = 0; gbc.gridy = 4;
+		gbc.weightx = 0.0;
 		mappingPanel.add(new JLabel("Source:"), gbc);
 		gbc.gridx = 1; gbc.gridy = 4;
+		gbc.weightx = 1.0;
 		sourceCombo = new JComboBox<>();
 		sourceCombo.setToolTipText("Map a CSV column to the document source, or use a fixed value.");
 		mappingPanel.add(sourceCombo, gbc);
 		gbc.gridx = 2; gbc.gridy = 4;
+		gbc.weightx = 0.5;
 		sourceFixedField = new JTextField(20);
 		sourceFixedField.setEnabled(false);
 		mappingPanel.add(sourceFixedField, gbc);
 		
 		// Section
 		gbc.gridx = 0; gbc.gridy = 5;
+		gbc.weightx = 0.0;
 		mappingPanel.add(new JLabel("Section:"), gbc);
 		gbc.gridx = 1; gbc.gridy = 5;
+		gbc.weightx = 1.0;
 		sectionCombo = new JComboBox<>();
 		sectionCombo.setToolTipText("Map a CSV column to the document section, or use a fixed value.");
 		mappingPanel.add(sectionCombo, gbc);
 		gbc.gridx = 2; gbc.gridy = 5;
+		gbc.weightx = 0.5;
 		sectionFixedField = new JTextField(20);
 		sectionFixedField.setEnabled(false);
 		mappingPanel.add(sectionFixedField, gbc);
 		
 		// Type
 		gbc.gridx = 0; gbc.gridy = 6;
+		gbc.weightx = 0.0;
 		mappingPanel.add(new JLabel("Type:"), gbc);
 		gbc.gridx = 1; gbc.gridy = 6;
+		gbc.weightx = 1.0;
 		typeCombo = new JComboBox<>();
 		typeCombo.setToolTipText("Map a CSV column to the document type, or use a fixed value.");
 		mappingPanel.add(typeCombo, gbc);
 		gbc.gridx = 2; gbc.gridy = 6;
+		gbc.weightx = 0.5;
 		typeFixedField = new JTextField(20);
 		typeFixedField.setEnabled(false);
 		mappingPanel.add(typeFixedField, gbc);
 		
 		// Notes
 		gbc.gridx = 0; gbc.gridy = 7;
+		gbc.weightx = 0.0;
 		mappingPanel.add(new JLabel("Notes:"), gbc);
 		gbc.gridx = 1; gbc.gridy = 7;
+		gbc.weightx = 1.0;
 		notesCombo = new JComboBox<>();
 		notesCombo.setToolTipText("Map a CSV column to the document notes, or use a fixed value.");
 		mappingPanel.add(notesCombo, gbc);
 		gbc.gridx = 2; gbc.gridy = 7;
+		gbc.weightx = 0.5;
 		notesFixedField = new JTextField(20);
 		notesFixedField.setEnabled(false);
 		mappingPanel.add(notesFixedField, gbc);
 		
 		// Date/time
 		gbc.gridx = 0; gbc.gridy = 8;
+		gbc.weightx = 0.0;
 		mappingPanel.add(new JLabel("Date/Time:"), gbc);
 		gbc.gridx = 1; gbc.gridy = 8;
+		gbc.weightx = 1.0;
 		dateCombo = new JComboBox<>();
 		dateCombo.setToolTipText("Map a CSV column to the document date/time, or use a fixed value.");
 		mappingPanel.add(dateCombo, gbc);
 		gbc.gridx = 2; gbc.gridy = 8;
+		gbc.weightx = 0.5;
 		dateFormatField = new JTextField("yyyy-MM-dd", 20);
 		dateFormatField.setToolTipText("Date format pattern, e.g. yyyy-MM-dd, dd/MM/yyyy, dd-MM-yyyy.");
 		mappingPanel.add(dateFormatField, gbc);
 		
-		this.add(mappingPanel, BorderLayout.CENTER);
+		// Wrap separator + mapping panels
+		JPanel centerPanel = new JPanel(new BorderLayout());
+		centerPanel.add(separatorPanel, BorderLayout.NORTH);
+		centerPanel.add(mappingPanel, BorderLayout.CENTER);
+		this.add(centerPanel, BorderLayout.CENTER);
 		
 		// --- East: preview ---
 		JPanel previewPanel = new JPanel(new BorderLayout());
@@ -237,6 +280,7 @@ public class CsvImporter extends JDialog {
 		previewTableModel = new DefaultTableModel();
 		previewTable = new JTable(previewTableModel);
 		previewTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+		previewTable.setToolTipText("Preview of the first 20 rows from the CSV file. Click a row to see its text below.");
 		JScrollPane tableScrollPane = new JScrollPane(previewTable);
 		tableScrollPane.setPreferredSize(new Dimension(400, 200));
 		TitledBorder tbPreview = new TitledBorder(new EtchedBorder(), "Preview (first 20 rows)");
@@ -249,6 +293,7 @@ public class CsvImporter extends JDialog {
 		textPreviewArea.setWrapStyleWord(true);
 		textPreviewArea.setLineWrap(true);
 		textPreviewArea.setEditable(false);
+		textPreviewArea.setToolTipText("Full text of the selected row in the preview table above.");
 		JScrollPane textScrollPane = new JScrollPane(textPreviewArea);
 		TitledBorder tbText = new TitledBorder(new EtchedBorder(), "Text preview");
 		tbText.setTitleJustification(TitledBorder.CENTER);
@@ -260,12 +305,13 @@ public class CsvImporter extends JDialog {
 		// --- Bottom: buttons ---
 		JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
 		
-		ImageIcon cancelIcon = new ImageIcon(new ImageIcon(getClass().getResource("/icons/tabler-icon-x.png")).getImage().getScaledInstance(18, 18, java.awt.Image.SCALE_SMOOTH));
+		ImageIcon cancelIcon = new SvgIcon("/icons/google_close.svg", 18).getImageIcon();
 		JButton cancelButton = new JButton("Cancel", cancelIcon);
+		cancelButton.setToolTipText("Close this dialog without importing.");
 		cancelButton.addActionListener(e -> dispose());
 		bottomPanel.add(cancelButton);
 		
-		ImageIcon goIcon = new ImageIcon(new ImageIcon(getClass().getResource("/icons/tabler-icon-check.png")).getImage().getScaledInstance(18, 18, java.awt.Image.SCALE_SMOOTH));
+		ImageIcon goIcon = new SvgIcon("/icons/tabler_plus.svg", 18).getImageIcon();
 		JButton importButton = new JButton("Import CSV", goIcon);
 		importButton.setEnabled(false);
 		importButton.setToolTipText("Import all rows from the CSV file as DNA documents.");
@@ -305,7 +351,9 @@ public class CsvImporter extends JDialog {
 			if (result == JFileChooser.APPROVE_OPTION) {
 				csvFile = fc.getSelectedFile();
 				filePathField.setText(csvFile.getAbsolutePath());
-				loadCsvPreview();
+				String sep = (String) separatorCombo.getSelectedItem();
+				if (sep == null || sep.isEmpty()) sep = ",";
+				loadCsvPreview(sep);
 				populateDropdowns();
 				importButton.setEnabled(csvRows != null && !csvRows.isEmpty());
 			}
@@ -336,6 +384,15 @@ public class CsvImporter extends JDialog {
 							"Text required", JOptionPane.WARNING_MESSAGE);
 					return;
 				}
+				
+				// Confirmation dialog
+				int confirm = JOptionPane.showConfirmDialog(CsvImporter.this,
+						"Do you want to import " + csvRows.size() + " document(s) from the CSV file?",
+						"Confirm import", JOptionPane.YES_NO_OPTION);
+				if (confirm != JOptionPane.YES_OPTION) {
+					return;
+				}
+				
 				int textColIndex = csvHeaders.indexOf(textCol);
 				String titleCol = getSelectedColumn(titleCombo);
 				String authorCol = getSelectedColumn(authorCombo);
@@ -348,13 +405,17 @@ public class CsvImporter extends JDialog {
 				if (dateFormat.isEmpty()) {
 					dateFormat = "yyyy-MM-dd";
 				}
+				String separator = (String) separatorCombo.getSelectedItem();
+				if (separator == null || separator.isEmpty()) {
+					separator = ",";
+				}
 				
 				ImportWorker worker = new ImportWorker(
 						CsvImporter.this,
 						csvRows, csvHeaders,
 						textColIndex,
 						titleCol, authorCol, sourceCol, sectionCol, typeCol, notesCol, dateCol,
-						dateFormat,
+						dateFormat, separator,
 						getFixedValue(titleCombo, titleFixedField),
 						getFixedValue(authorCombo, authorFixedField),
 						getFixedValue(sourceCombo, sourceFixedField),
@@ -373,14 +434,16 @@ public class CsvImporter extends JDialog {
 	
 	/**
 	 * Load the CSV file, parse headers and rows, and populate the preview table.
+	 * @param separator The column separator character (e.g., comma, semicolon).
 	 */
-	private void loadCsvPreview() {
+	private void loadCsvPreview(String separator) {
 		csvHeaders = new ArrayList<>();
 		csvRows = new ArrayList<>();
 		previewTableModel.setRowCount(0);
 		previewTableModel.setColumnCount(0);
 		
 		if (csvFile == null) return;
+		char sep = separator.isEmpty() ? ',' : separator.charAt(0);
 		
 		try (FileInputStream is = new FileInputStream(csvFile);
 			 InputStreamReader isr = new InputStreamReader(is, "UTF-8");
@@ -389,7 +452,7 @@ public class CsvImporter extends JDialog {
 			// Read header
 			String headerLine = br.readLine();
 			if (headerLine == null) return;
-			String[] headers = parseCsvLine(headerLine);
+			String[] headers = parseCsvLine(headerLine, sep);
 			for (String h : headers) {
 				csvHeaders.add(h.trim());
 			}
@@ -404,7 +467,7 @@ public class CsvImporter extends JDialog {
 			String line;
 			int rowNum = 0;
 			while ((line = br.readLine()) != null && rowNum < 20) {
-				String[] values = parseCsvLine(line);
+				String[] values = parseCsvLine(line, sep);
 				csvRows.add(values);
 				
 				Object[] rowData = new Object[values.length + 1];
@@ -418,7 +481,7 @@ public class CsvImporter extends JDialog {
 			
 			// Read remaining rows for import (beyond preview)
 			while ((line = br.readLine()) != null) {
-				csvRows.add(parseCsvLine(line));
+				csvRows.add(parseCsvLine(line, sep));
 			}
 			
 			LogEvent l = new LogEvent(Logger.MESSAGE,
@@ -445,9 +508,11 @@ public class CsvImporter extends JDialog {
 	}
 	
 	/**
-	 * Parse a single line of CSV, handling quoted fields containing commas.
+	 * Parse a single line of CSV, handling quoted fields containing the separator.
+	 * @param line The CSV line to parse.
+	 * @param separator The column separator character.
 	 */
-	private String[] parseCsvLine(String line) {
+	private String[] parseCsvLine(String line, char separator) {
 		List<String> fields = new ArrayList<>();
 		boolean inQuotes = false;
 		StringBuilder current = new StringBuilder();
@@ -462,7 +527,7 @@ public class CsvImporter extends JDialog {
 				} else {
 					inQuotes = !inQuotes;
 				}
-			} else if (c == ',' && !inQuotes) {
+			} else if (c == separator && !inQuotes) {
 				fields.add(current.toString());
 				current = new StringBuilder();
 			} else {
@@ -565,10 +630,11 @@ public class CsvImporter extends JDialog {
 	
 	/**
 	 * Convert a String to a date using a specific date-time format.
+	 * Dates are interpreted as UTC to ensure consistent results across time zones.
 	 */
 	private static LocalDateTime stringToDateTime(String text, String dateTimeFormat) {
 		if (text == null || text.isEmpty()) {
-			return LocalDateTime.now();
+			return LocalDateTime.now(ZoneOffset.UTC);
 		}
 		DateTimeFormatter formatter = DateTimeFormatter.ofPattern(dateTimeFormat);
 		try {
@@ -580,9 +646,9 @@ public class CsvImporter extends JDialog {
 			} catch (DateTimeParseException e2) {
 				LogEvent l = new LogEvent(Logger.WARNING,
 						"Date/time could not be parsed.",
-						"The date/time \"" + text + "\" could not be parsed with pattern \"" + dateTimeFormat + "\". Using current date/time instead.", e);
+						"The date/time \"" + text + "\" could not be parsed with pattern \"" + dateTimeFormat + "\". Using current UTC date/time instead.", e);
 				Dna.logger.log(l);
-				return LocalDateTime.now();
+				return LocalDateTime.now(ZoneOffset.UTC);
 			}
 		}
 	}
@@ -597,6 +663,7 @@ public class CsvImporter extends JDialog {
 		private int textColIndex;
 		private String titleCol, authorCol, sourceCol, sectionCol, typeCol, notesCol, dateCol;
 		private String dateFormat;
+		private String separator;
 		private String titleFixed, authorFixed, sourceFixed, sectionFixed, typeFixed, notesFixed;
 		private int coderId;
 		private int good, bad, numDocumentsBefore;
@@ -606,7 +673,7 @@ public class CsvImporter extends JDialog {
 				List<String[]> rows, List<String> headers,
 				int textColIndex,
 				String titleCol, String authorCol, String sourceCol, String sectionCol, String typeCol, String notesCol, String dateCol,
-				String dateFormat,
+				String dateFormat, String separator,
 				String titleFixed, String authorFixed, String sourceFixed, String sectionFixed, String typeFixed, String notesFixed) {
 			LogEvent l = new LogEvent(Logger.MESSAGE,
 					"[GUI] Initializing CSV import thread: " + Thread.currentThread().getName(),
@@ -625,6 +692,7 @@ public class CsvImporter extends JDialog {
 			this.notesCol = notesCol;
 			this.dateCol = dateCol;
 			this.dateFormat = dateFormat;
+			this.separator = separator;
 			this.titleFixed = titleFixed;
 			this.authorFixed = authorFixed;
 			this.sourceFixed = sourceFixed;
