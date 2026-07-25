@@ -457,7 +457,7 @@ public class CsvImporter extends JDialog {
 			 BufferedReader br = new BufferedReader(isr)) {
 			
 			// Read header
-			String headerLine = br.readLine();
+			String headerLine = readCsvRow(br);
 			if (headerLine == null) return;
 			String[] headers = parseCsvLine(headerLine, sep);
 			for (String h : headers) {
@@ -471,10 +471,10 @@ public class CsvImporter extends JDialog {
 			}
 			
 			// Read rows (up to 20 for preview)
-			String line;
 			int rowNum = 0;
-			while ((line = br.readLine()) != null && rowNum < 20) {
-				String[] values = parseCsvLine(line, sep);
+			String row = readCsvRow(br);
+			while (row != null && rowNum < 20) {
+				String[] values = parseCsvLine(row, sep);
 				csvRows.add(values);
 				
 				Object[] rowData = new Object[values.length + 1];
@@ -484,11 +484,13 @@ public class CsvImporter extends JDialog {
 				}
 				previewTableModel.addRow(rowData);
 				rowNum++;
+				row = readCsvRow(br);
 			}
 			
 			// Read remaining rows for import (beyond preview)
-			while ((line = br.readLine()) != null) {
-				csvRows.add(parseCsvLine(line, sep));
+			while (row != null) {
+				csvRows.add(parseCsvLine(row, sep));
+				row = readCsvRow(br);
 			}
 			
 			LogEvent l = new LogEvent(Logger.MESSAGE,
@@ -543,6 +545,52 @@ public class CsvImporter extends JDialog {
 		}
 		fields.add(current.toString());
 		return fields.toArray(new String[0]);
+	}
+	
+	/**
+	 * Read a complete CSV row from the reader, handling multi-line quoted fields.
+	 * Lines are accumulated until the number of double-quote characters is balanced
+	 * (i.e., any quoted field that spans multiple lines is fully contained).
+	 * @param br The buffered reader.
+	 * @return The complete row as a single string, or null if EOF.
+	 */
+	private String readCsvRow(BufferedReader br) throws IOException {
+		String line = br.readLine();
+		if (line == null) return null;
+		
+		// Count quotes in the current accumulated text
+		StringBuilder sb = new StringBuilder(line);
+		int quoteCount = countQuotes(sb.toString());
+		
+		// If quotes are unbalanced, keep reading lines until balanced
+		while (quoteCount % 2 != 0) {
+			String nextLine = br.readLine();
+			if (nextLine == null) break;
+			sb.append('\n');
+			sb.append(nextLine);
+			quoteCount = countQuotes(sb.toString());
+		}
+		
+		return sb.toString();
+	}
+	
+	/**
+	 * Count the number of double-quote characters in a string,
+	 * ignoring escaped quotes ("" inside quoted fields).
+	 */
+	private int countQuotes(String text) {
+		int count = 0;
+		for (int i = 0; i < text.length(); i++) {
+			if (text.charAt(i) == '"') {
+				if (i + 1 < text.length() && text.charAt(i + 1) == '"') {
+					// escaped quote pair counts as a literal quote, skip both
+					i++;
+				} else {
+					count++;
+				}
+			}
+		}
+		return count;
 	}
 	
 	/**
