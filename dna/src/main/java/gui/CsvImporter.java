@@ -318,7 +318,7 @@ public class CsvImporter extends JDialog {
 		cancelButton.addActionListener(e -> dispose());
 		bottomPanel.add(cancelButton);
 		
-		ImageIcon goIcon = new SvgIcon("/icons/tabler_plus.svg", 18).getImageIcon();
+		ImageIcon goIcon = new SvgIcon("/icons/tabler_check.svg", 18).getImageIcon();
 		JButton importButton = new JButton("Import CSV", goIcon);
 		importButton.setEnabled(false);
 		importButton.setToolTipText("Import all rows from the CSV file as DNA documents.");
