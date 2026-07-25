@@ -81,7 +81,6 @@ public class CsvImporter extends JDialog {
 	boolean documentsImported = false;
 	
 	private static final String FIXED_VALUE = "< Fixed value... >";
-	private static final String IGNORE = "< ignore >";
 	private static final String SELECT_COLUMN = "-- select column --";
 	
 	/**
@@ -550,29 +549,28 @@ public class CsvImporter extends JDialog {
 	 * Populate all combo boxes with CSV column names and special options.
 	 */
 	private void populateDropdowns() {
-		DefaultComboBoxModel<String> modelWithIgnore = new DefaultComboBoxModel<>();
-		modelWithIgnore.addElement(SELECT_COLUMN);
+		DefaultComboBoxModel<String> model = new DefaultComboBoxModel<>();
+		model.addElement(SELECT_COLUMN);
 		for (String h : csvHeaders) {
-			modelWithIgnore.addElement(h);
+			model.addElement(h);
 		}
-		modelWithIgnore.addElement(FIXED_VALUE);
-		modelWithIgnore.addElement(IGNORE);
+		model.addElement(FIXED_VALUE);
 		
-		// Text combo: no ignore option
+		// Text combo: no fixed value option
 		DefaultComboBoxModel<String> textModel = new DefaultComboBoxModel<>();
 		textModel.addElement(SELECT_COLUMN);
 		for (String h : csvHeaders) {
 			textModel.addElement(h);
 		}
 		
-		titleCombo.setModel(copyModel(modelWithIgnore));
+		titleCombo.setModel(copyModel(model));
 		textCombo.setModel(copyModel(textModel));
-		authorCombo.setModel(copyModel(modelWithIgnore));
-		sourceCombo.setModel(copyModel(modelWithIgnore));
-		sectionCombo.setModel(copyModel(modelWithIgnore));
-		typeCombo.setModel(copyModel(modelWithIgnore));
-		notesCombo.setModel(copyModel(modelWithIgnore));
-		dateCombo.setModel(copyModel(modelWithIgnore));
+		authorCombo.setModel(copyModel(model));
+		sourceCombo.setModel(copyModel(model));
+		sectionCombo.setModel(copyModel(model));
+		typeCombo.setModel(copyModel(model));
+		notesCombo.setModel(copyModel(model));
+		dateCombo.setModel(copyModel(model));
 	}
 	
 	private DefaultComboBoxModel<String> copyModel(DefaultComboBoxModel<String> source) {
@@ -596,11 +594,11 @@ public class CsvImporter extends JDialog {
 	}
 	
 	/**
-	 * Get the selected column name from a combo box, or null if ignore/select.
+	 * Get the selected column name from a combo box, or null if no column is selected.
 	 */
 	private String getSelectedColumn(JComboBox<String> combo) {
 		Object selected = combo.getSelectedItem();
-		if (selected == null || SELECT_COLUMN.equals(selected) || IGNORE.equals(selected) || FIXED_VALUE.equals(selected)) {
+		if (selected == null || SELECT_COLUMN.equals(selected) || FIXED_VALUE.equals(selected)) {
 			return null;
 		}
 		return selected.toString();
