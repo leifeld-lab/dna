@@ -61,6 +61,7 @@ class Popup extends JDialog {
 	private Coder coder;
 	private JComboBox<Coder> coderComboBox;
 	private JButton cancelButton, saveButton;
+	private boolean escapePressed = false;
 	
 	/**
 	 * Popup dialog window to display the contents of a statements. The user can
@@ -435,11 +436,12 @@ class Popup extends JDialog {
 		rootPane.getActionMap().put("popupEscape", new AbstractAction() {
 			private static final long serialVersionUID = 1L;
 			public void actionPerformed(ActionEvent e) {
-				if (windowDecoration && cancelButton != null) {
-					cancelButton.doClick();
-				} else {
-					dispose();
-				}
+			if (windowDecoration && cancelButton != null) {
+				cancelButton.doClick();
+			} else {
+				escapePressed = true;
+				dispose();
+			}
 			}
 		});
 		rootPane.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke("ENTER"), "popupEnter");
@@ -511,6 +513,15 @@ class Popup extends JDialog {
 	 */
 	boolean hasWindowDecoration() {
 		return this.windowDecoration;
+	}
+
+	/**
+	 * Was the popup closed via the Escape key?
+	 * 
+	 * @return True if Escape was pressed to close the popup.
+	 */
+	boolean isEscapePressed() {
+		return this.escapePressed;
 	}
 
 	/**
