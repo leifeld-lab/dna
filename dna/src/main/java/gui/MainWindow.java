@@ -225,6 +225,17 @@ public class MainWindow extends JFrame {
 		this.getRootPane().getInputMap(JRootPane.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke("control F"),	"open search dialog");
 		this.getRootPane().getActionMap().put("open search dialog", actionSearchDialog);
 		
+		// keyboard shortcut: Escape (global) → focus document table
+		this.getRootPane().getInputMap(JRootPane.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke("ESCAPE"), "focusDocumentTable");
+		this.getRootPane().getActionMap().put("focusDocumentTable", new AbstractAction() {
+			private static final long serialVersionUID = 1L;
+			public void actionPerformed(ActionEvent e) {
+				if (popup == null || !popup.isValid()) {
+					documentTablePanel.getDocumentTable().requestFocusInWindow();
+				}
+			}
+		});
+		
 		// keyboard shortcuts for statement type creation (Ctrl+1 through Ctrl+9)
 		for (int i = 1; i <= 9; i++) {
 			final int index = i - 1;
@@ -238,30 +249,6 @@ public class MainWindow extends JFrame {
 			});
 		}
 		
-		// keyboard shortcuts for document navigation (Page Up / Page Down)
-		this.getRootPane().getInputMap(JRootPane.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke("PAGE_DOWN"), "nextDocument");
-		this.getRootPane().getActionMap().put("nextDocument", new AbstractAction() {
-			private static final long serialVersionUID = 1L;
-			public void actionPerformed(ActionEvent e) {
-				JTable dt = documentTablePanel.getDocumentTable();
-				int row = dt.getSelectedRow();
-				if (row >= 0 && row < dt.getRowCount() - 1) {
-					dt.setRowSelectionInterval(row + 1, row + 1);
-				}
-			}
-		});
-		this.getRootPane().getInputMap(JRootPane.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke("PAGE_UP"), "previousDocument");
-		this.getRootPane().getActionMap().put("previousDocument", new AbstractAction() {
-			private static final long serialVersionUID = 1L;
-			public void actionPerformed(ActionEvent e) {
-				JTable dt = documentTablePanel.getDocumentTable();
-				int row = dt.getSelectedRow();
-				if (row > 0) {
-					dt.setRowSelectionInterval(row - 1, row - 1);
-				}
-			}
-		});
-
 		ImageIcon recodeStatementsIcon = new ImageIcon(new ImageIcon(getClass().getResource("/icons/tabler-icon-pencil.png")).getImage().getScaledInstance(18, 18, Image.SCALE_SMOOTH));
 		actionRecodeStatements = new ActionRecodeStatements("Edit multiple statements...", recodeStatementsIcon, "Recode the statements currently selected in the statement table", null);
 		actionRecodeStatements.setEnabled(false);
@@ -626,17 +613,6 @@ public class MainWindow extends JFrame {
 			}
 		});
 		
-		// keyboard shortcut: Escape in text pane → focus document table
-		textWindow.getInputMap(JComponent.WHEN_FOCUSED).put(KeyStroke.getKeyStroke("ESCAPE"), "textEscape");
-		textWindow.getActionMap().put("textEscape", new AbstractAction() {
-			private static final long serialVersionUID = 1L;
-			public void actionPerformed(ActionEvent e) {
-				if (popup == null || !popup.isValid()) {
-					documentTable.requestFocusInWindow();
-				}
-			}
-		});
-		
 		// keyboard shortcuts: Ctrl+Up/Down to navigate statements, Ctrl+Enter to open popup
 		textWindow.getInputMap(JComponent.WHEN_FOCUSED).put(KeyStroke.getKeyStroke("control UP"), "prevStatement");
 		textWindow.getActionMap().put("prevStatement", new AbstractAction() {
@@ -921,8 +897,15 @@ public class MainWindow extends JFrame {
 		}
 		
 		if (target != null) {
-			textWindow.select(target.getStart(), target.getStop());
-			textWindow.setCaretPosition(target.getStop());
+			// highlight the entire statement text, with caret at a sensible boundary
+			if (direction < 0) {
+				// Ctrl+Up: caret at end (navigating upward from below)
+				textWindow.select(target.getStart(), target.getStop());
+			} else {
+				// Ctrl+Down: caret at beginning (navigating downward from above)
+				textWindow.setCaretPosition(target.getStop());
+				textWindow.moveCaretPosition(target.getStart());
+			}
 			try {
 				@SuppressWarnings("deprecation")
 				Rectangle2D r = textWindow.modelToView(target.getStart());
