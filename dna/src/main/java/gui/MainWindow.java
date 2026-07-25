@@ -195,7 +195,7 @@ public class MainWindow extends JFrame {
 		actionAddDocument.setEnabled(false);
 		
 		ImageIcon removeDocumentsIcon = new ImageIcon(new ImageIcon(getClass().getResource("/icons/tabler-icon-file-minus.png")).getImage().getScaledInstance(18, 18, Image.SCALE_SMOOTH));
-		actionRemoveDocuments = new ActionRemoveDocuments("Remove document(s)", removeDocumentsIcon, "Remove the document(s) currently selected in the document table", KeyEvent.VK_R);
+		actionRemoveDocuments = new ActionRemoveDocuments("Remove document(s)", removeDocumentsIcon, "Remove the document(s) currently selected in the document table", null);
 		actionRemoveDocuments.setEnabled(false);
 		
 		ImageIcon editDocumentsIcon = new ImageIcon(new ImageIcon(getClass().getResource("/icons/tabler-icon-edit.png")).getImage().getScaledInstance(18, 18, Image.SCALE_SMOOTH));
@@ -215,7 +215,7 @@ public class MainWindow extends JFrame {
 		actionImporter.setEnabled(false);
 
 		ImageIcon searchDialogIcon = new ImageIcon(new ImageIcon(getClass().getResource("/icons/tabler-icon-search.png")).getImage().getScaledInstance(18, 18, Image.SCALE_SMOOTH));
-		actionSearchDialog = new ActionSearchDialog("Regex text search", searchDialogIcon, "Search for regular expressions in document texts and find matches", KeyEvent.VK_F);
+		actionSearchDialog = new ActionSearchDialog("Regex text search", searchDialogIcon, "Search for regular expressions in document texts and find matches", null);
 		actionSearchDialog.setEnabled(false);
 		this.getRootPane().getInputMap(JRootPane.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke("control F"),	"open search dialog");
 		this.getRootPane().getActionMap().put("open search dialog", actionSearchDialog);
@@ -258,11 +258,11 @@ public class MainWindow extends JFrame {
 		});
 
 		ImageIcon recodeStatementsIcon = new ImageIcon(new ImageIcon(getClass().getResource("/icons/tabler-icon-pencil.png")).getImage().getScaledInstance(18, 18, Image.SCALE_SMOOTH));
-		actionRecodeStatements = new ActionRecodeStatements("Edit multiple statements...", recodeStatementsIcon, "Recode the statements currently selected in the statement table", KeyEvent.VK_R);
+		actionRecodeStatements = new ActionRecodeStatements("Edit multiple statements...", recodeStatementsIcon, "Recode the statements currently selected in the statement table", null);
 		actionRecodeStatements.setEnabled(false);
 
 		ImageIcon removeStatementsIcon = new ImageIcon(new ImageIcon(getClass().getResource("/icons/tabler-icon-square-minus.png")).getImage().getScaledInstance(18, 18, Image.SCALE_SMOOTH));
-		actionRemoveStatements = new ActionRemoveStatements("Remove statement(s)", removeStatementsIcon, "Remove the statement(s) currently selected in the statement table", KeyEvent.VK_D);
+		actionRemoveStatements = new ActionRemoveStatements("Remove statement(s)", removeStatementsIcon, "Remove the statement(s) currently selected in the statement table", null);
 		actionRemoveStatements.setEnabled(false);
 
 		ImageIcon statementTypeEditorIcon = new SvgIcon("/icons/tabler_message_2.svg", 18).getImageIcon();
@@ -270,7 +270,7 @@ public class MainWindow extends JFrame {
 		actionStatementTypeEditor.setEnabled(false);
 
 		ImageIcon attributeManagerIcon = new ImageIcon(new ImageIcon(getClass().getResource("/icons/tabler-icon-list.png")).getImage().getScaledInstance(18, 18, Image.SCALE_SMOOTH));
-		actionAttributeManager = new ActionAttributeManager("Open attribute manager", attributeManagerIcon, "Open the attribute manager to edit entities and their attribute values.", KeyEvent.VK_A);
+		actionAttributeManager = new ActionAttributeManager("Open attribute manager", attributeManagerIcon, "Open the attribute manager to edit entities and their attribute values.", null);
 		actionAttributeManager.setEnabled(false);
 
 		ImageIcon networkExporterIcon = new ImageIcon(new ImageIcon(getClass().getResource("/icons/tabler-icon-affiliate.png")).getImage().getScaledInstance(18, 18, Image.SCALE_SMOOTH));
@@ -282,14 +282,14 @@ public class MainWindow extends JFrame {
 		actionBackboneExporter.setEnabled(false);
 
 		ImageIcon coderRelationsEditorIcon = new ImageIcon(new ImageIcon(getClass().getResource("/icons/tabler-icon-user-check.png")).getImage().getScaledInstance(18, 18, Image.SCALE_SMOOTH));
-		actionCoderRelationsEditor = new ActionCoderRelationsEditor("Edit coder relations", coderRelationsEditorIcon, "Open the coder relations editor define whose documents and statements you can view and edit.", KeyEvent.VK_R);
+		actionCoderRelationsEditor = new ActionCoderRelationsEditor("Edit coder relations", coderRelationsEditorIcon, "Open the coder relations editor define whose documents and statements you can view and edit.", null);
 		actionCoderRelationsEditor.setEnabled(false);
 		
 		ImageIcon loggerIcon = new ImageIcon(new ImageIcon(getClass().getResource("/icons/tabler-icon-bug.png")).getImage().getScaledInstance(18, 18, Image.SCALE_SMOOTH));
 		actionLoggerDialog = new ActionLoggerDialog("Display message log", loggerIcon, "Display a log of messages, warnings, and errors in a dialog window", KeyEvent.VK_L);
 		
 		ImageIcon aboutIcon = new SvgIcon("/icons/dna.svg", 18).getImageIcon();
-		actionAboutWindow = new ActionAboutWindow("About DNA", aboutIcon, "Display information about DNA", KeyEvent.VK_B);
+		actionAboutWindow = new ActionAboutWindow("About DNA", aboutIcon, "Display information about DNA", null);
 
 		// define models
 		documentTableModel = new DocumentTableModel();
@@ -767,21 +767,6 @@ public class MainWindow extends JFrame {
 	}
 
 	/**
-	 * Show a statement popup window.
-	 * 
-	 * @param x           X location on the screen.
-	 * @param y           Y location on the screen.
-	 * @param s           The statement to show.
-	 * @param location    The location of the popup window.
-	 */
-	/**
-	 * Create a statement from the currently selected text using the statement
-	 * type at the given index. Opens the popup dialog for editing the
-	 * statement variables if successful.
-	 * 
-	 * @param statementTypeIndex  Index of the statement type (0-based).
-	 */
-	/**
 	 * Jump the text cursor to the next regex match after the current caret
 	 * position and scroll to make it visible.
 	 */
@@ -836,6 +821,13 @@ public class MainWindow extends JFrame {
 		}
 	}
 
+	/**
+	 * Create a statement from the currently selected text using the statement
+	 * type at the given index. Opens the popup dialog for editing the
+	 * statement variables if successful.
+	 * 
+	 * @param statementTypeIndex  Index of the statement type (0-based).
+	 */
 	private void createStatementFromSelection(int statementTypeIndex) {
 		if (popup != null && popup.isValid()) {
 			return;
@@ -902,6 +894,14 @@ public class MainWindow extends JFrame {
 		}
 	}
 
+	/**
+	 * Show a statement popup window.
+	 * 
+	 * @param x           X location on the screen.
+	 * @param y           Y location on the screen.
+	 * @param s           The statement to show.
+	 * @param location    The location of the popup window.
+	 */
 	private void newPopup(double x, double y, Statement s, Point location) {
 		
 		// determine coders for the coder combo box in the popup window
