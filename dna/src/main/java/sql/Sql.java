@@ -686,7 +686,7 @@ public class Sql {
 					+ "AttributeValue VARCHAR(190) NOT NULL DEFAULT '', "
 					+ "UNIQUE (EntityId, AttributeVariableId));");
 		}
-		// fill default data into the tables (Admin coder, settings, statement types)
+		// fill default data into the tables (Admin coder, settings, statement types, empty entities)
 		s.add("INSERT INTO CODERS (ID, Name, Red, Green, Blue, Password, PermissionEditStatementTypes, PermissionEditCoders, PermissionEditOthersDocuments, PermissionEditOthersStatements) VALUES (1, 'Admin', 255, 255, 0, '" + encryptedAdminPassword + "', 1, 1, 1, 1);");
 		s.add("INSERT INTO SETTINGS (Property, Value) VALUES ('version', '" + Dna.version + "');");
 		s.add("INSERT INTO SETTINGS (Property, Value) VALUES ('date', '" + Dna.date + "');");
@@ -705,6 +705,18 @@ public class Sql {
 		s.add("INSERT INTO ATTRIBUTEVARIABLES (VariableId, AttributeVariable) VALUES (1, 'Notes');");
 		s.add("INSERT INTO ATTRIBUTEVARIABLES (VariableId, AttributeVariable) VALUES (2, 'Notes');");
 		s.add("INSERT INTO ATTRIBUTEVARIABLES (VariableId, AttributeVariable) VALUES (3, 'Notes');");
+		s.add("INSERT INTO ENTITIES (ID, VariableId, Value, Red, Green, Blue) VALUES (1, 1, '', 0, 0, 0);");
+		s.add("INSERT INTO ENTITIES (ID, VariableId, Value, Red, Green, Blue) VALUES (2, 2, '', 0, 0, 0);");
+		s.add("INSERT INTO ENTITIES (ID, VariableId, Value, Red, Green, Blue) VALUES (3, 3, '', 0, 0, 0);");
+		s.add("INSERT INTO ATTRIBUTEVALUES (EntityId, AttributeVariableId, AttributeValue) VALUES (1, 1, '');");
+		s.add("INSERT INTO ATTRIBUTEVALUES (EntityId, AttributeVariableId, AttributeValue) VALUES (2, 2, '');");
+		s.add("INSERT INTO ATTRIBUTEVALUES (EntityId, AttributeVariableId, AttributeValue) VALUES (3, 3, '');");
+		s.add("INSERT INTO ATTRIBUTEVALUES (EntityId, AttributeVariableId, AttributeValue) VALUES (1, 4, '');");
+		s.add("INSERT INTO ATTRIBUTEVALUES (EntityId, AttributeVariableId, AttributeValue) VALUES (2, 5, '');");
+		s.add("INSERT INTO ATTRIBUTEVALUES (EntityId, AttributeVariableId, AttributeValue) VALUES (3, 6, '');");
+		s.add("INSERT INTO ATTRIBUTEVALUES (EntityId, AttributeVariableId, AttributeValue) VALUES (1, 7, '');");
+		s.add("INSERT INTO ATTRIBUTEVALUES (EntityId, AttributeVariableId, AttributeValue) VALUES (2, 8, '');");
+		s.add("INSERT INTO ATTRIBUTEVALUES (EntityId, AttributeVariableId, AttributeValue) VALUES (3, 9, '');");
 		// NPF Story Element
 		s.add("INSERT INTO STATEMENTTYPES (ID, Label, Red, Green, Blue) VALUES (2, 'NPF Story Element', 100, 200, 190);");
 		s.add("INSERT INTO VARIABLES (ID, Variable, DataType, StatementTypeId) VALUES(5, 'narrator', 'short text', 2);");
@@ -713,6 +725,12 @@ public class Sql {
 		s.add("INSERT INTO VARIABLES (ID, Variable, DataType, StatementTypeId) VALUES(8, 'plot', 'short text', 2);");
 		s.add("INSERT INTO VARIABLES (ID, Variable, DataType, StatementTypeId) VALUES(9, 'hero', 'short text', 2);");
 		s.add("INSERT INTO VARIABLES (ID, Variable, DataType, StatementTypeId) VALUES(10, 'policy solution', 'short text', 2);");
+		s.add("INSERT INTO ENTITIES (ID, VariableId, Value, Red, Green, Blue) VALUES (4, 5, '', 0, 0, 0);");
+		s.add("INSERT INTO ENTITIES (ID, VariableId, Value, Red, Green, Blue) VALUES (5, 6, '', 0, 0, 0);");
+		s.add("INSERT INTO ENTITIES (ID, VariableId, Value, Red, Green, Blue) VALUES (6, 7, '', 0, 0, 0);");
+		s.add("INSERT INTO ENTITIES (ID, VariableId, Value, Red, Green, Blue) VALUES (7, 8, '', 0, 0, 0);");
+		s.add("INSERT INTO ENTITIES (ID, VariableId, Value, Red, Green, Blue) VALUES (8, 9, '', 0, 0, 0);");
+		s.add("INSERT INTO ENTITIES (ID, VariableId, Value, Red, Green, Blue) VALUES (9, 10, '', 0, 0, 0);");
 		// Annotation
 		s.add("INSERT INTO STATEMENTTYPES (ID, Label, Red, Green, Blue) VALUES (3, 'Annotation', 211, 211, 211);");
 		s.add("INSERT INTO VARIABLES (ID, Variable, DataType, StatementTypeId) VALUES(11, 'note', 'long text', 3);");
