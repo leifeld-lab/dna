@@ -319,7 +319,7 @@ public class CsvImporter extends JDialog {
 		
 		// Tooltip toggle
 		JPanel tooltipPanel = new JPanel();
-		JCheckBox tooltipCheckBox = new JCheckBox("Show tooltips");
+		JCheckBox tooltipCheckBox = new JCheckBox("Display tooltips with instructions");
 		tooltipCheckBox.addActionListener(e -> {
 			ToolTipManager.sharedInstance().setInitialDelay(10);
 			if (tooltipCheckBox.isSelected()) {
