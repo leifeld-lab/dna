@@ -123,16 +123,19 @@ class Popup extends JDialog {
 		int h = 20; // getting the text field height does not work properly on MacOS, so need to hard-code
 		startPos.setPreferredSize(new Dimension(startPos.getPreferredSize().width, h));
 		startPos.setEditable(false);
+		startPos.setFocusable(false); // skip in tab order for faster keyboard navigation
 		
 		JLabel ePosLabel = new JLabel("end");
 		JTextField endPos = new JTextField(Integer.toString(statement.getStop()));
 		endPos.setPreferredSize(new Dimension(endPos.getPreferredSize().width, h));
 		endPos.setEditable(false);
+		endPos.setFocusable(false); // skip in tab order for faster keyboard navigation
 
 		JLabel idLabel = new JLabel(" ID");
 		JTextField idField = new JTextField(Integer.toString(statementId));
 		idField.setPreferredSize(new Dimension(idField.getPreferredSize().width, h));
 		idField.setEditable(false);
+		idField.setFocusable(false); // skip in tab order for faster keyboard navigation
 
 		String type = statement.getStatementTypeLabel();
 		JLabel typeLabel = new JLabel(" " + type);
@@ -191,6 +194,23 @@ class Popup extends JDialog {
 			coderComboBox.setRenderer(new CoderComboBoxRenderer(9, 0, 22));
 			coderComboBox.setSelectedIndex(selectedIndex);
 			coderComboBox.setPreferredSize(new Dimension(coderComboBox.getPreferredSize().width, h)); // need to hard-code height because of MacOS
+			// add focus listener to show visual focus indicator during keyboard navigation
+			javax.swing.border.Border defaultCoderBorder = coderComboBox.getBorder();
+			Color focusColor = javax.swing.UIManager.getColor("Component.focusColor");
+			if (focusColor == null) {
+				focusColor = Color.BLUE;
+			}
+			javax.swing.border.Border focusCoderBorder = new LineBorder(focusColor, 1);
+			coderComboBox.addFocusListener(new FocusListener() {
+				@Override
+				public void focusGained(FocusEvent e) {
+					coderComboBox.setBorder(focusCoderBorder);
+				}
+				@Override
+				public void focusLost(FocusEvent e) {
+					coderComboBox.setBorder(defaultCoderBorder);
+				}
+			});
 			idAndPositionPanel.add(coderComboBox);
 		}
 		
@@ -430,6 +450,28 @@ class Popup extends JDialog {
 					saveButton.doClick();
 				} else if (!windowDecoration && editable) {
 					dispose(); // triggers focus-lost save listener in MainWindow
+				}
+			}
+		});
+		
+		// Ctrl-D: delete statement (remove button)
+		rootPane.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke("control D"), "popupDelete");
+		rootPane.getActionMap().put("popupDelete", new AbstractAction() {
+			private static final long serialVersionUID = 1L;
+			public void actionPerformed(ActionEvent e) {
+				if (remove != null && remove.isEnabled()) {
+					remove.doClick();
+				}
+			}
+		});
+		
+		// Ctrl-C: duplicate statement (copy button)
+		rootPane.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke("control C"), "popupDuplicate");
+		rootPane.getActionMap().put("popupDuplicate", new AbstractAction() {
+			private static final long serialVersionUID = 1L;
+			public void actionPerformed(ActionEvent e) {
+				if (duplicate != null && duplicate.isEnabled()) {
+					duplicate.doClick();
 				}
 			}
 		});
