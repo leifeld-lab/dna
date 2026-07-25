@@ -111,7 +111,7 @@ public class CsvImporter extends JDialog {
 		filePathField.setToolTipText("Path to the selected CSV file.");
 		filePanel.add(filePathField, BorderLayout.CENTER);
 		
-		ImageIcon folderIcon = new SvgIcon("/icons/tabler_plus.svg", 18).getImageIcon();
+		ImageIcon folderIcon = new SvgIcon("/icons/tabler_folder.svg", 18).getImageIcon();
 		JButton browseButton = new JButton("Browse...", folderIcon);
 		browseButton.setToolTipText("Select a CSV file to import.");
 		filePanel.add(browseButton, BorderLayout.EAST);
