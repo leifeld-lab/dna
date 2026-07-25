@@ -126,6 +126,14 @@ public class CsvImporter extends JDialog {
 		separatorCombo.setToolTipText("Column separator character used in the CSV file. Common: comma (,), semicolon (;), tab.");
 		separatorPanel.add(separatorCombo);
 		separatorPanel.setToolTipText("Select the character that separates columns in your CSV file.");
+		separatorCombo.addActionListener(e -> {
+			if (csvFile != null) {
+				String sep = (String) separatorCombo.getSelectedItem();
+				if (sep == null || sep.isEmpty()) sep = ",";
+				loadCsvPreview(sep);
+				populateDropdowns();
+			}
+		});
 		
 		// --- Center: mapping panel ---
 		JPanel mappingPanel = new JPanel(new GridBagLayout());
