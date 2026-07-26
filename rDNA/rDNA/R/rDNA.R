@@ -760,6 +760,32 @@ dna_getAttributes <- function(statementType = NULL,
 #'   execution. Use this as a precaution to test how changes would affect the
 #'   database before repeating the function without simulation.
 #'
+#' @examples
+#' \dontrun{
+#' dna_init()
+#' dna_sample()
+#' dna_openDatabase("sample.dna", coderId = 1, coderPassword = "sample")
+#'
+#' # first, retrieve existing attributes (here: for the organization variable)
+#' at <- dna_getAttributes(variableId = 2)
+#' at # look at the data frame with the results
+#'
+#' # you can now manipulate the attributes; changes percolate to statements!
+#' at[2, 2] <- "new value"     # 1) replace an organization name
+#' at$color[6] <- "#FF00FF"    # 2) replace an actor's color
+#' at$Alias[3] <- "Some alias" # 3) replace an actor's alias value
+#' at[9, ] <- at[4, ]          # 4) to add a new actor, add a duplicate row...
+#' at$ID[9] <- -1              #    ...then set its ID to -1...
+#' at$value[9] <- "new actor"  #    ...then replace its name
+#' at <- at[-5, ]              # 5) remove an actor (including all statements!)
+#' at$newVar <- letters[1:8]   # 6) add new attribute variable
+#'
+#' # finally, write the updates back into the database
+#' at                                                             # review
+#' dna_setAttributes(data = at, variableId = 2, simulate = TRUE)  # simulate it
+#' dna_setAttributes(data = at, variableId = 2, simulate = FALSE) # execute it
+#' }
+#'
 #' @author Philip Leifeld
 #'
 #' @family attributes
@@ -1018,6 +1044,18 @@ dna_getStatements <- function(statementType = 1, statementIds = integer()) {
 #' @return The ID of the newly created statement in the DNA database. If the
 #' statement could not be added, the function returns \code{-1}.
 #'
+#' @examples
+#' \dontrun{
+#' dna_init()
+#' dna_sample()
+#' dna_openDatabase(coderId = 1,
+#'                  coderPassword = "sample",
+#'                  db_url = "sample.dna")
+#' dna_addStatement(documentID = 4, startCaret = 10, endCaret = 50,
+#'   statementType = 1, coder = 2, organization = "Sierra Club",
+#'   concept = "some new concept", agreement = 0)
+#' }
+#'
 #' @author Philip Leifeld
 #'
 #' @family statements
@@ -1123,6 +1161,16 @@ dna_addStatement <- function(documentID,
 #'
 #' @param statement_id A vector of statement IDs (can be a single ID).
 #'
+#' @examples
+#' \dontrun{
+#' dna_init()
+#' dna_sample()
+#' dna_openDatabase(coderId = 1,
+#'                  coderPassword = "sample",
+#'                  db_url = "sample.dna")
+#' dna_deleteStatements(c(3, 5)) # delete statements with IDs 3 and 5
+#' }
+#'
 #' @author Philip Leifeld
 #'
 #' @family statements
@@ -1200,6 +1248,7 @@ print.dna_statements <- function(x, trim = 10, ...) {
 #' documents <- dna_getDocuments(documentIds = c(1, 2))
 #' documents
 #' }
+#'
 #' @author Philip Leifeld
 #' @family documents
 #' @importFrom rJava .jcall .jarray
@@ -1288,6 +1337,23 @@ dna_getDocuments <- function(documentIds = integer()) {
 #'   epoch seconds since 1 January 1970 UTC.
 #' @return The document ID(s) of the newly created document(s) in the database.
 #'
+#' @examples
+#' \dontrun{
+#' dna_init()
+#' dna_sample()
+#' dna_openDatabase(coderId = 1,
+#'                  coderPassword = "sample",
+#'                  db_url = "sample.dna")
+#'
+#' # add a single new document (look at ?as.POSIXct for help on the date/time)
+#' dna_addDocuments(1, "title", "new text", "author", "source", "section",
+#'   "type", "notes", as.numeric(as.POSIXct("2026-06-13 18:30:00", tz = "UTC")))
+#'
+#' # add multiple documents (with the current date/time in this case)
+#' dna_addDocuments(coder_id = 1, title = letters[1:6], text = letters[1:6],
+#'   author = letters[1:6], date_time = Sys.time())
+#' }
+#'
 #' @author Philip Leifeld
 #'
 #' @family documents
@@ -1315,6 +1381,58 @@ dna_addDocuments <- function(coder_id = 1,
 
   if (length(coder_id) > 1) {
     stop("'coder_id' must be a single ID value, not multiple values. The same coder ID is used for all document you add.")
+  }
+
+  # replace null values
+  if (is.null(title)) {
+    title <- ""
+  }
+  if (is.null(text)) {
+    text <- ""
+  }
+  if (is.null(author)) {
+    author <- ""
+  }
+  if (is.null(source)) {
+    source <- ""
+  }
+  if (is.null(section)) {
+    section <- ""
+  }
+  if (is.null(type)) {
+    type <- ""
+  }
+  if (is.null(notes)) {
+    notes <- ""
+  }
+  if (is.null(date_time)) {
+    date_time <- Sys.time() # use current date/time if NULL
+  }
+
+  # fix different lengths, assuming the the text argument determines the number of documents
+  n <- length(text)
+  if (n > 1) {
+    if (length(title) == 1) {
+      title <- rep(title, n)
+    }
+    if (length(author) == 1) {
+      author <- rep(author, n)
+    }
+    if (length(source) == 1) {
+      source <- rep(source, n)
+    }
+    if (length(section) == 1) {
+      section <- rep(section, n)
+    }
+    if (length(type) == 1) {
+      type <- rep(type, n)
+    }
+    if (length(notes) == 1) {
+      notes <- rep(notes, n)
+    }
+    if (length(date_time) == 1) {
+      date_time <- rep(date_time, n)
+    }
   }
 
   if (length(title) != length(text) | length(title) != length(author) | length(title) != length(source) | length(title) != length(section) | length(title) != length(type) | length(title) != length(notes) | length(title) != length(date_time)) {
@@ -1394,6 +1512,16 @@ dna_addDocuments <- function(coder_id = 1,
 #' given vector of document IDs from the database.
 #'
 #' @param document_id A vector of document IDs (can be a single ID).
+#'
+#' @examples
+#' \dontrun{
+#' dna_init()
+#' dna_sample()
+#' dna_openDatabase(coderId = 1,
+#'                  coderPassword = "sample",
+#'                  db_url = "sample.dna")
+#' dna_deleteDocuments(c(3, 5)) # delete documents with IDs 3 and 5
+#' }
 #'
 #' @author Philip Leifeld
 #'

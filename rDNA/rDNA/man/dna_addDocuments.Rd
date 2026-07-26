@@ -55,6 +55,24 @@ be provided as a vector of POSIXct objects or a vector of numeric objects
 indicating epoch seconds since 1 January 1970 UTC. After adding the documents
 to the database, the function returns the generated document IDs.
 }
+\examples{
+\dontrun{
+dna_init()
+dna_sample()
+dna_openDatabase(coderId = 1,
+                 coderPassword = "sample",
+                 db_url = "sample.dna")
+
+# add a single new document (look at ?as.POSIXct for help on the date/time)
+dna_addDocuments(1, "title", "new text", "author", "source", "section",
+  "type", "notes", as.numeric(as.POSIXct("2026-06-13 18:30:00", tz = "UTC")))
+
+# add multiple documents (with the current date/time in this case)
+dna_addDocuments(coder_id = 1, title = letters[1:6], text = letters[1:6],
+  author = letters[1:6], date_time = Sys.time())
+}
+
+}
 \seealso{
 Other documents: 
 \code{\link{dna_deleteDocuments}()},

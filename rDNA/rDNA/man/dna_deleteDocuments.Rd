@@ -16,6 +16,17 @@ Delete document(s) from the DNA database.
 The \code{dna_deleteDocuments} function removes one or more documents with a
 given vector of document IDs from the database.
 }
+\examples{
+\dontrun{
+dna_init()
+dna_sample()
+dna_openDatabase(coderId = 1,
+                 coderPassword = "sample",
+                 db_url = "sample.dna")
+dna_deleteDocuments(c(3, 5)) # delete documents with IDs 3 and 5
+}
+
+}
 \seealso{
 Other documents: 
 \code{\link{dna_addDocuments}()},
