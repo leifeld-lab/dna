@@ -93,6 +93,12 @@ public class MainWindow extends JFrame {
 	private Popup popup = null;
 
 	/**
+	 * Tracks the ID of the last statement navigated to via Ctrl+Up/Down,
+	 * used to correctly cycle through duplicate statements at the same position.
+	 */
+	private int lastNavigatedStatementId = -1;
+
+	/**
 	 * A document table swing worker thread.
 	 */
 	private DocumentTableRefreshWorker documentTableWorker;
@@ -851,6 +857,11 @@ public class MainWindow extends JFrame {
 	/**
 	 * Navigate to the previous or next statement in the current document's text.
 	 * Selects the statement text and scrolls to make it visible.
+	 * <p>
+	 * Statements are sorted by (start, end, ID) so that duplicates at the same
+	 * caret position can be cycled through individually. A
+	 * {@code lastNavigatedStatementId} field tracks which statement was last
+	 * selected, enabling correct prev/next stepping through duplicates.
 	 * 
 	 * @param direction  -1 for previous statement, 1 for next statement.
 	 */
@@ -864,39 +875,60 @@ public class MainWindow extends JFrame {
 			.filter(s -> s.getDocumentId() == documentId)
 			.filter(s -> s.getCoderId() == Dna.sql.getActiveCoder().getId() || Dna.sql.getActiveCoder().isPermissionViewOthersStatements())
 			.filter(s -> s.getCoderId() == Dna.sql.getActiveCoder().getId() || Dna.sql.getActiveCoder().getCoderRelations().get(s.getCoderId()).isViewStatements())
-			.sorted((a, b) -> Integer.compare(a.getStart(), b.getStart()))
+			.sorted(Comparator.comparingInt(Statement::getStart)
+			                  .thenComparingInt(Statement::getStop)
+			                  .thenComparingInt(Statement::getId))
 			.collect(Collectors.toList());
 		
 		if (statements.isEmpty()) return;
 		
 		Statement target = null;
-		if (direction < 0) {
-			// find the statement that ends strictly before caret, closest to caret
-			for (int i = statements.size() - 1; i >= 0; i--) {
-				if (statements.get(i).getStop() < caretPos) {
-					target = statements.get(i);
-					break;
-				}
+		
+		// Try to locate the last navigated statement in the sorted list
+		int currentIdx = -1;
+		for (int i = 0; i < statements.size(); i++) {
+			if (statements.get(i).getId() == lastNavigatedStatementId) {
+				currentIdx = i;
+				break;
 			}
-			// wrap around: if no statement before caret, pick last
-			if (target == null && !statements.isEmpty()) {
-				target = statements.get(statements.size() - 1);
+		}
+		
+		if (currentIdx >= 0) {
+			// Step through the sorted list from the last navigated statement
+			if (direction < 0) {
+				int targetIdx = (currentIdx == 0) ? statements.size() - 1 : currentIdx - 1;
+				target = statements.get(targetIdx);
+			} else {
+				int targetIdx = (currentIdx >= statements.size() - 1) ? 0 : currentIdx + 1;
+				target = statements.get(targetIdx);
 			}
 		} else {
-			// find the first statement that starts after caret
-			for (Statement s : statements) {
-				if (s.getStart() > caretPos) {
-					target = s;
-					break;
+			// No prior navigation: fall back to caret-based logic
+			if (direction < 0) {
+				for (int i = statements.size() - 1; i >= 0; i--) {
+					if (statements.get(i).getStop() <= caretPos) {
+						target = statements.get(i);
+						break;
+					}
 				}
-			}
-			// wrap around: if no statement after caret, pick first
-			if (target == null && !statements.isEmpty()) {
-				target = statements.get(0);
+				if (target == null && !statements.isEmpty()) {
+					target = statements.get(statements.size() - 1);
+				}
+			} else {
+				for (Statement s : statements) {
+					if (s.getStart() > caretPos) {
+						target = s;
+						break;
+					}
+				}
+				if (target == null && !statements.isEmpty()) {
+					target = statements.get(0);
+				}
 			}
 		}
 		
 		if (target != null) {
+			lastNavigatedStatementId = target.getId();
 			// highlight the entire statement text, with caret at a sensible boundary
 			if (direction < 0) {
 				// Ctrl+Up: caret at end (navigating upward from below)
@@ -1004,6 +1036,7 @@ public class MainWindow extends JFrame {
 			documentTableModel.increaseFrequency(documentId);
 			textPanel.paintStatements();
 			textWindow.setCaretPosition(selectionEnd);
+			lastNavigatedStatementId = -1; // reset so next Ctrl+↑/↓ uses caret-based fallback
 			
 			Statement s = Dna.sql.getStatement(statementId);
 			statementTableModel.addRow(s);
@@ -1673,6 +1706,7 @@ public class MainWindow extends JFrame {
 	 * Adjust controls to document table selection.
 	 */
 	private void changedDocumentTableSelection() {
+		lastNavigatedStatementId = -1; // reset statement navigation tracker when switching documents
 		JTable documentTable = documentTablePanel.getDocumentTable();
 		int rowCount = documentTable.getSelectedRowCount();
 		boolean allOwned = true;
