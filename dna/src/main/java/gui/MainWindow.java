@@ -40,7 +40,10 @@ import model.Coder;
 import model.Statement;
 import model.StatementType;
 import model.TableDocument;
+import model.Regex;
 import model.Value;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import sql.ConnectionProfile;
 import sql.Sql;
 
@@ -88,6 +91,19 @@ public class MainWindow extends JFrame {
 	private ActionLoggerDialog actionLoggerDialog;
 	private ActionAboutWindow actionAboutWindow;
 	private Popup popup = null;
+
+	/**
+	 * Tracks the ID of the last statement navigated to via Ctrl+Up/Down,
+	 * used to correctly cycle through duplicate statements at the same position.
+	 */
+	private int lastNavigatedStatementId = -1;
+
+	/**
+	 * Flag set during Ctrl+Up/Down statement navigation to suppress
+	 * the statement table selection listener from opening a popup
+	 * when the cycled-to statement is programmatically selected.
+	 */
+	private boolean isNavigatingStatement = false;
 
 	/**
 	 * A document table swing worker thread.
@@ -193,7 +209,7 @@ public class MainWindow extends JFrame {
 		actionAddDocument.setEnabled(false);
 		
 		ImageIcon removeDocumentsIcon = new ImageIcon(new ImageIcon(getClass().getResource("/icons/tabler-icon-file-minus.png")).getImage().getScaledInstance(18, 18, Image.SCALE_SMOOTH));
-		actionRemoveDocuments = new ActionRemoveDocuments("Remove document(s)", removeDocumentsIcon, "Remove the document(s) currently selected in the document table", KeyEvent.VK_R);
+		actionRemoveDocuments = new ActionRemoveDocuments("Remove document(s)", removeDocumentsIcon, "Remove the document(s) currently selected in the document table", null);
 		actionRemoveDocuments.setEnabled(false);
 		
 		ImageIcon editDocumentsIcon = new ImageIcon(new ImageIcon(getClass().getResource("/icons/tabler-icon-edit.png")).getImage().getScaledInstance(18, 18, Image.SCALE_SMOOTH));
@@ -217,17 +233,41 @@ public class MainWindow extends JFrame {
 		actionImporter.setEnabled(false);
 
 		ImageIcon searchDialogIcon = new ImageIcon(new ImageIcon(getClass().getResource("/icons/tabler-icon-search.png")).getImage().getScaledInstance(18, 18, Image.SCALE_SMOOTH));
-		actionSearchDialog = new ActionSearchDialog("Regex text search", searchDialogIcon, "Search for regular expressions in document texts and find matches", KeyEvent.VK_F);
+		actionSearchDialog = new ActionSearchDialog("Regex text search", searchDialogIcon, "Search for regular expressions in document texts and find matches", null);
 		actionSearchDialog.setEnabled(false);
 		this.getRootPane().getInputMap(JRootPane.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke("control F"),	"open search dialog");
 		this.getRootPane().getActionMap().put("open search dialog", actionSearchDialog);
-
+		
+		// keyboard shortcut: Escape (global) → focus document table
+		this.getRootPane().getInputMap(JRootPane.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke("ESCAPE"), "focusDocumentTable");
+		this.getRootPane().getActionMap().put("focusDocumentTable", new AbstractAction() {
+			private static final long serialVersionUID = 1L;
+			public void actionPerformed(ActionEvent e) {
+				if (popup == null || !popup.isValid()) {
+					documentTablePanel.getDocumentTable().requestFocusInWindow();
+				}
+			}
+		});
+		
+		// keyboard shortcuts for statement type creation (Ctrl+1 through Ctrl+9)
+		for (int i = 1; i <= 9; i++) {
+			final int index = i - 1;
+			String key = "createStatementType" + i;
+			this.getRootPane().getInputMap(JRootPane.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke("control " + i), key);
+			this.getRootPane().getActionMap().put(key, new AbstractAction() {
+				private static final long serialVersionUID = 1L;
+				public void actionPerformed(ActionEvent e) {
+					createStatementFromSelection(index);
+				}
+			});
+		}
+		
 		ImageIcon recodeStatementsIcon = new ImageIcon(new ImageIcon(getClass().getResource("/icons/tabler-icon-pencil.png")).getImage().getScaledInstance(18, 18, Image.SCALE_SMOOTH));
-		actionRecodeStatements = new ActionRecodeStatements("Edit multiple statements...", recodeStatementsIcon, "Recode the statements currently selected in the statement table", KeyEvent.VK_R);
+		actionRecodeStatements = new ActionRecodeStatements("Edit multiple statements...", recodeStatementsIcon, "Recode the statements currently selected in the statement table", null);
 		actionRecodeStatements.setEnabled(false);
 
 		ImageIcon removeStatementsIcon = new ImageIcon(new ImageIcon(getClass().getResource("/icons/tabler-icon-square-minus.png")).getImage().getScaledInstance(18, 18, Image.SCALE_SMOOTH));
-		actionRemoveStatements = new ActionRemoveStatements("Remove statement(s)", removeStatementsIcon, "Remove the statement(s) currently selected in the statement table", KeyEvent.VK_D);
+		actionRemoveStatements = new ActionRemoveStatements("Remove statement(s)", removeStatementsIcon, "Remove the statement(s) currently selected in the statement table", null);
 		actionRemoveStatements.setEnabled(false);
 
 		ImageIcon statementTypeEditorIcon = new SvgIcon("/icons/tabler_message_2.svg", 18).getImageIcon();
@@ -235,7 +275,7 @@ public class MainWindow extends JFrame {
 		actionStatementTypeEditor.setEnabled(false);
 
 		ImageIcon attributeManagerIcon = new ImageIcon(new ImageIcon(getClass().getResource("/icons/tabler-icon-list.png")).getImage().getScaledInstance(18, 18, Image.SCALE_SMOOTH));
-		actionAttributeManager = new ActionAttributeManager("Open attribute manager", attributeManagerIcon, "Open the attribute manager to edit entities and their attribute values.", KeyEvent.VK_A);
+		actionAttributeManager = new ActionAttributeManager("Open attribute manager", attributeManagerIcon, "Open the attribute manager to edit entities and their attribute values.", null);
 		actionAttributeManager.setEnabled(false);
 
 		ImageIcon networkExporterIcon = new ImageIcon(new ImageIcon(getClass().getResource("/icons/tabler-icon-affiliate.png")).getImage().getScaledInstance(18, 18, Image.SCALE_SMOOTH));
@@ -247,14 +287,14 @@ public class MainWindow extends JFrame {
 		actionBackboneExporter.setEnabled(false);
 
 		ImageIcon coderRelationsEditorIcon = new ImageIcon(new ImageIcon(getClass().getResource("/icons/tabler-icon-user-check.png")).getImage().getScaledInstance(18, 18, Image.SCALE_SMOOTH));
-		actionCoderRelationsEditor = new ActionCoderRelationsEditor("Edit coder relations", coderRelationsEditorIcon, "Open the coder relations editor define whose documents and statements you can view and edit.", KeyEvent.VK_R);
+		actionCoderRelationsEditor = new ActionCoderRelationsEditor("Edit coder relations", coderRelationsEditorIcon, "Open the coder relations editor define whose documents and statements you can view and edit.", null);
 		actionCoderRelationsEditor.setEnabled(false);
 		
 		ImageIcon loggerIcon = new ImageIcon(new ImageIcon(getClass().getResource("/icons/tabler-icon-bug.png")).getImage().getScaledInstance(18, 18, Image.SCALE_SMOOTH));
 		actionLoggerDialog = new ActionLoggerDialog("Display message log", loggerIcon, "Display a log of messages, warnings, and errors in a dialog window", KeyEvent.VK_L);
 		
 		ImageIcon aboutIcon = new SvgIcon("/icons/dna.svg", 18).getImageIcon();
-		actionAboutWindow = new ActionAboutWindow("About DNA", aboutIcon, "Display information about DNA", KeyEvent.VK_B);
+		actionAboutWindow = new ActionAboutWindow("About DNA", aboutIcon, "Display information about DNA", null);
 
 		// define models
 		documentTableModel = new DocumentTableModel();
@@ -331,6 +371,9 @@ public class MainWindow extends JFrame {
 			public void valueChanged(ListSelectionEvent e) {
 				if (e.getValueIsAdjusting()) {
 					return;
+				}
+				if (isNavigatingStatement) {
+					return; // suppress popup during keyboard navigation
 				}
 				int rowCount = statementTable.getSelectedRowCount();
 				getStatementPanel().setMenuItemStatementsSelected(rowCount + " statements selected");
@@ -502,6 +545,7 @@ public class MainWindow extends JFrame {
 				ArrayList<StatementType> statementTypes = Dna.sql.getStatementTypes();
 				for (int i = 0; i < statementTypes.size(); i++) {
 					StatementType statementType = statementTypes.get(i);
+					final int stIndex = i;
 					JMenuItem menuItem = new JMenuItem("Format as " + statementType.getLabel());
 					menuItem.setOpaque(true);
 					menuItem.setBackground(statementType.getColor().toAWTColor());
@@ -510,29 +554,7 @@ public class MainWindow extends JFrame {
 					menuItem.addActionListener(new ActionListener() {
 						@Override
 						public void actionPerformed(ActionEvent e) {
-							int documentId = documentTablePanel.getSelectedDocumentId();
-							int selectionStart = textWindow.getSelectionStart();
-							int selectionEnd = textWindow.getSelectionEnd();
-							Statement statement = new Statement(selectionStart,
-									selectionEnd,
-									statementType.getId(),
-									Dna.sql.getActiveCoder().getId(),
-									statementType.getVariables(),
-									documentId);
-							int statementId = Dna.sql.addStatement(statement);
-							if (statementId > 0) {
-								documentTableModel.increaseFrequency(documentId);
-								textPanel.paintStatements();
-								textWindow.setCaretPosition(selectionEnd);
-								
-								// retrieve added statement, add to statement table, and open popup
-								Statement s = Dna.sql.getStatement(statementId);
-								statementTableModel.addRow(s);
-								Point location = textWindow.getLocationOnScreen();
-								textWindow.setSelectionStart(statement.getStart());
-								textWindow.setSelectionEnd(statement.getStop());
-								newPopup(x, y, s, location);
-							}
+							createStatementFromSelection(stIndex);
 						}
 					});
 					
@@ -595,6 +617,48 @@ public class MainWindow extends JFrame {
 						textWindow.setSelectionEnd(s.getStop());
 						newPopup(p.getX(), p.getY(), s, location);
 					}
+				}
+			}			});
+
+		// keyboard shortcut: Space to jump to next regex match in text
+		textWindow.getInputMap(JComponent.WHEN_FOCUSED).put(KeyStroke.getKeyStroke("SPACE"), "jumpToNextRegex");
+		textWindow.getActionMap().put("jumpToNextRegex", new AbstractAction() {
+			private static final long serialVersionUID = 1L;
+			public void actionPerformed(ActionEvent e) {
+				jumpToNextRegexMatch();
+			}
+		});
+		
+		// keyboard shortcuts: Ctrl+Up/Down to navigate statements, Ctrl+Enter to open popup
+		textWindow.getInputMap(JComponent.WHEN_FOCUSED).put(KeyStroke.getKeyStroke("control UP"), "prevStatement");
+		textWindow.getActionMap().put("prevStatement", new AbstractAction() {
+			private static final long serialVersionUID = 1L;
+			public void actionPerformed(ActionEvent e) {
+				navigateStatement(-1);
+			}
+		});
+		textWindow.getInputMap(JComponent.WHEN_FOCUSED).put(KeyStroke.getKeyStroke("control DOWN"), "nextStatement");
+		textWindow.getActionMap().put("nextStatement", new AbstractAction() {
+			private static final long serialVersionUID = 1L;
+			public void actionPerformed(ActionEvent e) {
+				navigateStatement(1);
+			}
+		});
+		textWindow.getInputMap(JComponent.WHEN_FOCUSED).put(KeyStroke.getKeyStroke("control ENTER"), "openStatementPopup");
+		textWindow.getActionMap().put("openStatementPopup", new AbstractAction() {
+			private static final long serialVersionUID = 1L;
+			public void actionPerformed(ActionEvent e) {
+				openCurrentStatementPopup();
+			}
+		});
+		
+		// keyboard shortcut: Enter in document table → focus text pane
+		documentTable.getInputMap(JComponent.WHEN_FOCUSED).put(KeyStroke.getKeyStroke("ENTER"), "enterDocument");
+		documentTable.getActionMap().put("enterDocument", new AbstractAction() {
+			private static final long serialVersionUID = 1L;
+			public void actionPerformed(ActionEvent e) {
+				if (documentTable.getSelectedRowCount() > 0) {
+					textWindow.grabFocus();
 				}
 			}
 		});
@@ -746,6 +810,274 @@ public class MainWindow extends JFrame {
 	}
 
 	/**
+	 * Jump the text cursor to the next regex match after the current caret
+	 * position and scroll to make it visible.
+	 */
+	private void jumpToNextRegexMatch() {
+		JTextPane textWindow = textPanel.getTextWindow();
+		String text = textWindow.getText();
+		if (text == null || text.isEmpty()) {
+			return;
+		}
+		ArrayList<Regex> regexes = Dna.sql.getRegexes();
+		if (regexes == null || regexes.isEmpty()) {
+			return;
+		}
+		int caretPos = textWindow.getCaretPosition();
+		int bestStart = Integer.MAX_VALUE;
+		int bestEnd = -1;
+		for (Regex regex : regexes) {
+			Pattern p = Pattern.compile(regex.getLabel(), Pattern.CASE_INSENSITIVE);
+			Matcher m = p.matcher(text);
+			while (m.find()) {
+				int start = m.start();
+				if (start > caretPos && start < bestStart) {
+					bestStart = start;
+					bestEnd = m.end();
+				}
+			}
+		}
+		if (bestStart == Integer.MAX_VALUE) {
+			// wrap around: restart search from beginning
+			for (Regex regex : regexes) {
+				Pattern p = Pattern.compile(regex.getLabel(), Pattern.CASE_INSENSITIVE);
+				Matcher m = p.matcher(text);
+				if (m.find()) {
+					int start = m.start();
+					if (start < bestStart) {
+						bestStart = start;
+						bestEnd = m.end();
+					}
+				}
+			}
+		}
+		if (bestStart != Integer.MAX_VALUE) {
+			textWindow.setCaretPosition(bestEnd);
+			textWindow.moveCaretPosition(bestStart);
+			try {
+				@SuppressWarnings("deprecation")
+				Rectangle2D r = textWindow.modelToView(bestStart);
+				textWindow.scrollRectToVisible(new Rectangle((int) r.getX(), (int) r.getY(), (int) r.getWidth(), (int) r.getHeight()));
+			} catch (BadLocationException ex) {
+				// ignore and don't scroll
+			}
+		}
+	}
+
+	/**
+	 * Navigate to the previous or next statement in the current document's text.
+	 * Selects the statement text and scrolls to make it visible.
+	 * <p>
+	 * Statements are sorted by (start, end, ID) so that duplicates at the same
+	 * caret position can be cycled through individually. A
+	 * {@code lastNavigatedStatementId} field tracks which statement was last
+	 * selected, enabling correct prev/next stepping through duplicates.
+	 * 
+	 * @param direction  -1 for previous statement, 1 for next statement.
+	 */
+	private void navigateStatement(int direction) {
+		JTextPane textWindow = textPanel.getTextWindow();
+		int caretPos = textWindow.getCaretPosition();
+		int documentId = documentTablePanel.getSelectedDocumentId();
+		if (documentId < 0 || Dna.sql.getActiveCoder() == null) return;
+		
+		List<Statement> statements = statementTableModel.getRows().stream()
+			.filter(s -> s.getDocumentId() == documentId)
+			.filter(s -> s.getCoderId() == Dna.sql.getActiveCoder().getId() || Dna.sql.getActiveCoder().isPermissionViewOthersStatements())
+			.filter(s -> s.getCoderId() == Dna.sql.getActiveCoder().getId() || Dna.sql.getActiveCoder().getCoderRelations().get(s.getCoderId()).isViewStatements())
+			.sorted(Comparator.comparingInt(Statement::getStart)
+			                  .thenComparingInt(Statement::getStop)
+			                  .thenComparingInt(Statement::getId))
+			.collect(Collectors.toList());
+		
+		if (statements.isEmpty()) return;
+		
+		Statement target = null;
+		
+		// Try to locate the last navigated statement in the sorted list
+		int currentIdx = -1;
+		for (int i = 0; i < statements.size(); i++) {
+			if (statements.get(i).getId() == lastNavigatedStatementId) {
+				currentIdx = i;
+				break;
+			}
+		}
+		
+		if (currentIdx >= 0) {
+			// Step through the sorted list from the last navigated statement
+			if (direction < 0) {
+				int targetIdx = (currentIdx == 0) ? statements.size() - 1 : currentIdx - 1;
+				target = statements.get(targetIdx);
+			} else {
+				int targetIdx = (currentIdx >= statements.size() - 1) ? 0 : currentIdx + 1;
+				target = statements.get(targetIdx);
+			}
+		} else {
+			// No prior navigation: fall back to caret-based logic
+			if (direction < 0) {
+				for (int i = statements.size() - 1; i >= 0; i--) {
+					if (statements.get(i).getStop() <= caretPos) {
+						target = statements.get(i);
+						break;
+					}
+				}
+				if (target == null && !statements.isEmpty()) {
+					target = statements.get(statements.size() - 1);
+				}
+			} else {
+				for (Statement s : statements) {
+					if (s.getStart() > caretPos) {
+						target = s;
+						break;
+					}
+				}
+				if (target == null && !statements.isEmpty()) {
+					target = statements.get(0);
+				}
+			}
+		}
+		
+		if (target != null) {
+			lastNavigatedStatementId = target.getId();
+			// highlight the entire statement text, with caret at a sensible boundary
+			if (direction < 0) {
+				// Ctrl+Up: caret at end (navigating upward from below)
+				textWindow.select(target.getStart(), target.getStop());
+			} else {
+				// Ctrl+Down: caret at beginning (navigating downward from above)
+				textWindow.setCaretPosition(target.getStop());
+				textWindow.moveCaretPosition(target.getStart());
+			}
+			try {
+				@SuppressWarnings("deprecation")
+				Rectangle2D r = textWindow.modelToView(target.getStart());
+				int viewportHeight = textPanel.getTextScrollPane().getViewport().getHeight();
+				int statementY = (int) r.getY();
+				int scrollY = Math.max(0, statementY - viewportHeight / 2);
+				textPanel.getTextScrollPane().getViewport().setViewPosition(new Point(0, scrollY));
+			} catch (BadLocationException ex) {
+				// ignore
+			}
+			// Highlight the cycled-to statement in the statement table without triggering popup
+			isNavigatingStatement = true;
+			statementPanel.setSelectedStatementId(target.getId());
+			isNavigatingStatement = false;
+		}
+	}
+	
+	/**
+	 * Open the statement popup for the statement currently under the caret.
+	 * Only works when a popup is not already open.
+	 */
+	private void openCurrentStatementPopup() {
+		if (popup != null && popup.isValid()) return;
+		
+		JTextPane textWindow = textPanel.getTextWindow();
+		int pos = textWindow.getCaretPosition();
+		int documentId = documentTablePanel.getSelectedDocumentId();
+		if (documentId < 0) return;
+		
+		List<Statement> currentStatements = statementTableModel.getRows().stream()
+			.filter(s -> s.getDocumentId() == documentId)
+			.filter(s -> s.getStart() <= pos && s.getStop() >= pos)
+			.filter(s -> s.getCoderId() == Dna.sql.getActiveCoder().getId() || Dna.sql.getActiveCoder().isPermissionViewOthersStatements())
+			.filter(s -> s.getCoderId() == Dna.sql.getActiveCoder().getId() || Dna.sql.getActiveCoder().getCoderRelations().get(s.getCoderId()).isViewStatements())
+			.collect(Collectors.toList());
+		
+		if (!currentStatements.isEmpty() && Dna.sql.getActiveCoder() != null) {
+			// Prefer the statement matching lastNavigatedStatementId (e.g., after
+			// cycling through duplicates via Ctrl+Up/Down), fall back to get(0)
+			Statement match = currentStatements.stream()
+				.filter(st -> st.getId() == lastNavigatedStatementId)
+				.findFirst().orElse(currentStatements.get(0));
+			Statement s = Dna.sql.getStatement(match.getId());
+			Point location = textWindow.getLocationOnScreen();
+			textWindow.select(s.getStart(), s.getStop());
+			try {
+				@SuppressWarnings("deprecation")
+				Rectangle2D r = textWindow.modelToView(s.getStart());
+				newPopup(r.getX(), r.getY(), s, location);
+			} catch (BadLocationException e) {
+				newPopup(100, 100, s, location);
+			}
+		}
+	}
+
+	/**
+	 * Create a statement from the currently selected text using the statement
+	 * type at the given index. Opens the popup dialog for editing the
+	 * statement variables if successful.
+	 * 
+	 * @param statementTypeIndex  Index of the statement type (0-based).
+	 */
+	private void createStatementFromSelection(int statementTypeIndex) {
+		if (popup != null && popup.isValid()) {
+			return;
+		}
+		JTextPane textWindow = textPanel.getTextWindow();
+		if (textWindow.getSelectedText() == null) {
+			return;
+		}
+		if (Dna.sql.getActiveCoder() == null) {
+			return;
+		}
+		if (!Dna.sql.getActiveCoder().isPermissionAddStatements()) {
+			return;
+		}
+		int documentId = documentTablePanel.getSelectedDocumentId();
+		if (documentId < 0) {
+			return;
+		}
+		
+		// check document-level permissions
+		int documentCoderId = documentTableModel.getRow(documentTablePanel.getDocumentTable().convertRowIndexToModel(documentTablePanel.getDocumentTable().getSelectedRow())).getCoder().getId();
+		if (documentCoderId != Dna.sql.getActiveCoder().getId() && !Dna.sql.getActiveCoder().isPermissionEditOthersDocuments()) {
+			return;
+		}
+		if (documentCoderId != Dna.sql.getActiveCoder().getId() && !Dna.sql.getActiveCoder().isPermissionEditOthersDocuments(documentCoderId)) {
+			return;
+		}
+		
+		ArrayList<StatementType> statementTypes = Dna.sql.getStatementTypes();
+		if (statementTypeIndex < 0 || statementTypeIndex >= statementTypes.size()) {
+			return;
+		}
+		
+		StatementType st = statementTypes.get(statementTypeIndex);
+		int selectionStart = textWindow.getSelectionStart();
+		int selectionEnd = textWindow.getSelectionEnd();
+		
+		Statement statement = new Statement(selectionStart,
+				selectionEnd,
+				st.getId(),
+				Dna.sql.getActiveCoder().getId(),
+				st.getVariables(),
+				documentId);
+		int statementId = Dna.sql.addStatement(statement);
+		if (statementId > 0) {
+			documentTableModel.increaseFrequency(documentId);
+			textPanel.paintStatements();
+			textWindow.setCaretPosition(selectionEnd);
+			lastNavigatedStatementId = -1; // reset so next Ctrl+↑/↓ uses caret-based fallback
+			
+			Statement s = Dna.sql.getStatement(statementId);
+			statementTableModel.addRow(s);
+			Point location = textWindow.getLocationOnScreen();
+			textWindow.setSelectionStart(statement.getStart());
+			textWindow.setSelectionEnd(statement.getStop());
+			
+			// compute popup position from selection start
+			try {
+				@SuppressWarnings("deprecation")
+				Rectangle2D r = textWindow.modelToView(selectionStart);
+				newPopup(r.getX(), r.getY(), s, location);
+			} catch (BadLocationException e) {
+				newPopup(100, 100, s, location);
+			}
+		}
+	}
+
+	/**
 	 * Show a statement popup window.
 	 * 
 	 * @param x           X location on the screen.
@@ -894,6 +1226,10 @@ public class MainWindow extends JFrame {
 			});
 		}
 		popup.setVisible(true); // needs to be called after setting modal; hence here instead of in the Popup class
+		
+		// Place focus on the first editable variable field so the user can
+		// start editing values right away without tabbing to the coder combo box.
+		SwingUtilities.invokeLater(() -> popup.focusFirstVariableField());
 	}
 	
 	/**
@@ -1392,6 +1728,7 @@ public class MainWindow extends JFrame {
 	 * Adjust controls to document table selection.
 	 */
 	private void changedDocumentTableSelection() {
+		lastNavigatedStatementId = -1; // reset statement navigation tracker when switching documents
 		JTable documentTable = documentTablePanel.getDocumentTable();
 		int rowCount = documentTable.getSelectedRowCount();
 		boolean allOwned = true;

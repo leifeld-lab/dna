@@ -143,6 +143,7 @@ class Popup extends JDialog {
 		duplicate = new JButton(duplicateIcon);
 		duplicate.setToolTipText("create a copy of this statement at the same location");
 		duplicate.setPreferredSize(new Dimension(h, h));
+		duplicate.setFocusable(false);
 		if (coder.isPermissionAddStatements() == false) {
 			duplicate.setEnabled(false);
 		}
@@ -151,6 +152,7 @@ class Popup extends JDialog {
 		remove = new JButton(removeIcon);
 		remove.setToolTipText("completely remove the whole statement (but keep the text)");
 		remove.setPreferredSize(new Dimension(h, h));
+		remove.setFocusable(false);
 		remove.setEnabled(true);
 		if (coder.isPermissionDeleteStatements() == false) {
 			remove.setEnabled(false);
@@ -460,6 +462,21 @@ class Popup extends JDialog {
 		return this.saveButton;
 	}
 	
+	/**
+	 * Request focus on the first editable variable combo box in the popup.
+	 * This lets the user start typing values immediately when the popup opens,
+	 * rather than having to tab past the coder combo box first.
+	 */
+	void focusFirstVariableField() {
+		Component[] components = gridBagPanel.getComponents();
+		for (int i = 0; i < components.length; i++) {
+			if (components[i] instanceof JComboBox && components[i].isEnabled()) {
+				components[i].requestFocusInWindow();
+				return;
+			}
+		}
+	}
+
 	/**
 	 * Check if the coder ID has been changed.
 	 * 
