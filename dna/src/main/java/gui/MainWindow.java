@@ -1219,7 +1219,9 @@ public class MainWindow extends JFrame {
 		} else { // no window decoration: focus lost listener
 			popup.addWindowFocusListener(new WindowAdapter() {
 				public void windowLostFocus(WindowEvent e) {
-					popupSave(popup);
+					if (!popup.isEscapePressed()) {
+						popupSave(popup);
+					}
 					popup.dispose();
 					statementPanel.getStatementTable().clearSelection(); // clear statement table selection when popup window closed
 				}
