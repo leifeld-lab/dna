@@ -143,6 +143,7 @@ class Popup extends JDialog {
 		duplicate = new JButton(duplicateIcon);
 		duplicate.setToolTipText("create a copy of this statement at the same location");
 		duplicate.setPreferredSize(new Dimension(h, h));
+		duplicate.setFocusable(false);
 		if (coder.isPermissionAddStatements() == false) {
 			duplicate.setEnabled(false);
 		}
@@ -151,6 +152,7 @@ class Popup extends JDialog {
 		remove = new JButton(removeIcon);
 		remove.setToolTipText("completely remove the whole statement (but keep the text)");
 		remove.setPreferredSize(new Dimension(h, h));
+		remove.setFocusable(false);
 		remove.setEnabled(true);
 		if (coder.isPermissionDeleteStatements() == false) {
 			remove.setEnabled(false);
