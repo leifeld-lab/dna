@@ -99,6 +99,13 @@ public class MainWindow extends JFrame {
 	private int lastNavigatedStatementId = -1;
 
 	/**
+	 * Flag set during Ctrl+Up/Down statement navigation to suppress
+	 * the statement table selection listener from opening a popup
+	 * when the cycled-to statement is programmatically selected.
+	 */
+	private boolean isNavigatingStatement = false;
+
+	/**
 	 * A document table swing worker thread.
 	 */
 	private DocumentTableRefreshWorker documentTableWorker;
@@ -364,6 +371,9 @@ public class MainWindow extends JFrame {
 			public void valueChanged(ListSelectionEvent e) {
 				if (e.getValueIsAdjusting()) {
 					return;
+				}
+				if (isNavigatingStatement) {
+					return; // suppress popup during keyboard navigation
 				}
 				int rowCount = statementTable.getSelectedRowCount();
 				getStatementPanel().setMenuItemStatementsSelected(rowCount + " statements selected");
@@ -941,10 +951,17 @@ public class MainWindow extends JFrame {
 			try {
 				@SuppressWarnings("deprecation")
 				Rectangle2D r = textWindow.modelToView(target.getStart());
-				textWindow.scrollRectToVisible(new Rectangle((int) r.getX(), (int) r.getY(), (int) r.getWidth(), (int) r.getHeight()));
+				int viewportHeight = textPanel.getTextScrollPane().getViewport().getHeight();
+				int statementY = (int) r.getY();
+				int scrollY = Math.max(0, statementY - viewportHeight / 2);
+				textPanel.getTextScrollPane().getViewport().setViewPosition(new Point(0, scrollY));
 			} catch (BadLocationException ex) {
 				// ignore
 			}
+			// Highlight the cycled-to statement in the statement table without triggering popup
+			isNavigatingStatement = true;
+			statementPanel.setSelectedStatementId(target.getId());
+			isNavigatingStatement = false;
 		}
 	}
 	
@@ -968,7 +985,12 @@ public class MainWindow extends JFrame {
 			.collect(Collectors.toList());
 		
 		if (!currentStatements.isEmpty() && Dna.sql.getActiveCoder() != null) {
-			Statement s = Dna.sql.getStatement(currentStatements.get(0).getId());
+			// Prefer the statement matching lastNavigatedStatementId (e.g., after
+			// cycling through duplicates via Ctrl+Up/Down), fall back to get(0)
+			Statement match = currentStatements.stream()
+				.filter(st -> st.getId() == lastNavigatedStatementId)
+				.findFirst().orElse(currentStatements.get(0));
+			Statement s = Dna.sql.getStatement(match.getId());
 			Point location = textWindow.getLocationOnScreen();
 			textWindow.select(s.getStart(), s.getStop());
 			try {
