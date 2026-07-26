@@ -76,6 +76,7 @@ public class MainWindow extends JFrame {
 	private ActionSearchDialog actionSearchDialog;
 	private ActionRefresh actionRefresh;
 	private ActionBatchImportDocuments actionBatchImportDocuments;
+	private ActionCsvImportDocuments actionCsvImportDocuments;
 	private ActionImporter actionImporter;
 	private ActionRecodeStatements actionRecodeStatements;
 	private ActionRemoveStatements actionRemoveStatements;
@@ -207,6 +208,10 @@ public class MainWindow extends JFrame {
 		actionBatchImportDocuments = new ActionBatchImportDocuments("Import from directory", batchImportDocumentsIcon, "Batch-import all text files from a folder as new documents", KeyEvent.VK_I);
 		actionBatchImportDocuments.setEnabled(false);
 
+		ImageIcon csvImportIcon = new SvgIcon("/icons/tabler_filter_plus.svg", 18).getImageIcon();
+		actionCsvImportDocuments = new ActionCsvImportDocuments("Import from CSV...", csvImportIcon, "Import documents from a CSV file with column-to-field mapping", KeyEvent.VK_V);
+		actionCsvImportDocuments.setEnabled(false);
+
 		ImageIcon importerIcon = new ImageIcon(new ImageIcon(getClass().getResource("/icons/tabler-icon-database-import.png")).getImage().getScaledInstance(18, 18, Image.SCALE_SMOOTH));
 		actionImporter = new ActionImporter("Import from DNA database", importerIcon, "Import documents, statements, entities, attributes, and regexes from another DNA database", KeyEvent.VK_D);
 		actionImporter.setEnabled(false);
@@ -278,6 +283,7 @@ public class MainWindow extends JFrame {
 				actionRemoveDocuments,
 				actionEditDocuments,
 				actionBatchImportDocuments,
+				actionCsvImportDocuments,
 				actionImporter,
 				actionSearchDialog,
 				actionRefresh,
@@ -992,6 +998,7 @@ public class MainWindow extends JFrame {
 			actionRemoveDocuments.setEnabled(false);
 			actionEditDocuments.setEnabled(false);
 			actionBatchImportDocuments.setEnabled(false);
+			actionCsvImportDocuments.setEnabled(false);
 			actionRefresh.setEnabled(false);
 			statusBar.documentRefreshStart();
 			time = System.nanoTime(); // take the time to compute later how long the updating took
@@ -1454,9 +1461,11 @@ public class MainWindow extends JFrame {
 			if (Dna.sql.getActiveCoder().isPermissionAddDocuments() == true) {
 				actionAddDocument.setEnabled(true);
 				actionBatchImportDocuments.setEnabled(true);
+				actionCsvImportDocuments.setEnabled(true);
 			} else {
 				actionAddDocument.setEnabled(false);
 				actionBatchImportDocuments.setEnabled(false);
+				actionCsvImportDocuments.setEnabled(false);
 			}
 			if (Dna.sql.getActiveCoder().isPermissionImportDocuments() == true) {
 				actionImporter.setEnabled(true);
@@ -1594,6 +1603,7 @@ public class MainWindow extends JFrame {
 			actionRemoveDocuments.setEnabled(false);
 			actionEditDocuments.setEnabled(false);
 			actionBatchImportDocuments.setEnabled(false);
+			actionCsvImportDocuments.setEnabled(false);
 			actionImporter.setEnabled(false);
 			actionRefresh.setEnabled(false);
 			actionRemoveStatements.setEnabled(false);
@@ -2137,6 +2147,26 @@ public class MainWindow extends JFrame {
 					"[GUI] Action executed: used document batch importer.",
 					"Batch-imported documents to the database.");
 			Dna.logger.log(l);
+		}
+	}
+
+	/**
+	 * An action to open the CSV file import dialog window.
+	 */
+	class ActionCsvImportDocuments extends AbstractAction {
+		private static final long serialVersionUID = 2L;
+
+		public ActionCsvImportDocuments(String text, ImageIcon icon, String desc, Integer mnemonic) {
+			super(text, icon);
+			putValue(SHORT_DESCRIPTION, desc);
+			putValue(MNEMONIC_KEY, mnemonic);
+		}
+
+		public void actionPerformed(ActionEvent e) {
+			CsvImporter importer = new CsvImporter();
+			if (importer.documentsImported) {
+				refreshDocumentTable();
+			}
 		}
 	}
 

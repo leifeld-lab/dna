@@ -38,6 +38,7 @@ documents
 documents <- dna_getDocuments(documentIds = c(1, 2))
 documents
 }
+
 }
 \seealso{
 Other documents: 

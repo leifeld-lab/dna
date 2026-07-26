@@ -53,6 +53,19 @@ types have different variables, the \code{...} argument catches all
 variables and their values supplied by the user. The statement ID will be
 automatically generated and returned.
 }
+\examples{
+\dontrun{
+dna_init()
+dna_sample()
+dna_openDatabase(coderId = 1,
+                 coderPassword = "sample",
+                 db_url = "sample.dna")
+dna_addStatement(documentID = 4, startCaret = 10, endCaret = 50,
+  statementType = 1, coder = 2, organization = "Sierra Club",
+  concept = "some new concept", agreement = 0)
+}
+
+}
 \seealso{
 Other statements: 
 \code{\link{dna_deleteStatements}()},

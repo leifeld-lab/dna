@@ -16,6 +16,17 @@ Delete statement(s) from the DNA database.
 The \code{dna_deleteStatements} function removes one or more statements with
 a given vector of statement IDs from the database.
 }
+\examples{
+\dontrun{
+dna_init()
+dna_sample()
+dna_openDatabase(coderId = 1,
+                 coderPassword = "sample",
+                 db_url = "sample.dna")
+dna_deleteStatements(c(3, 5)) # delete statements with IDs 3 and 5
+}
+
+}
 \seealso{
 Other statements: 
 \code{\link{dna_addStatement}()},

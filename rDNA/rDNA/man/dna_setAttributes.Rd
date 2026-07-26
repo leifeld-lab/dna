@@ -57,6 +57,33 @@ Identify which variable to update by supplying one of the following:
   \item the variable name and statement type as character objects
 }
 }
+\examples{
+\dontrun{
+dna_init()
+dna_sample()
+dna_openDatabase("sample.dna", coderId = 1, coderPassword = "sample")
+
+# first, retrieve existing attributes (here: for the organization variable)
+at <- dna_getAttributes(variableId = 2)
+at # look at the data frame with the results
+
+# you can now manipulate the attributes; changes percolate to statements!
+at[2, 2] <- "new value"     # 1) replace an organization name
+at$color[6] <- "#FF00FF"    # 2) replace an actor's color
+at$Alias[3] <- "Some alias" # 3) replace an actor's alias value
+at[9, ] <- at[4, ]          # 4) to add a new actor, add a duplicate row...
+at$ID[9] <- -1              #    ...then set its ID to -1...
+at$value[9] <- "new actor"  #    ...then replace its name
+at <- at[-5, ]              # 5) remove an actor (including all statements!)
+at$newVar <- letters[1:8]   # 6) add new attribute variable
+
+# finally, write the updates back into the database
+at                                                             # review
+dna_setAttributes(data = at, variableId = 2, simulate = TRUE)  # simulate it
+dna_setAttributes(data = at, variableId = 2, simulate = FALSE) # execute it
+}
+
+}
 \seealso{
 Other attributes: 
 \code{\link{dna_getAttributes}()}
