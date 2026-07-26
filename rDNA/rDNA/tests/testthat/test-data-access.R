@@ -201,8 +201,7 @@ test_that("document management works", {
   # dna_addDocuments
   expect_equal(dna_addDocuments(1, "title", "new text", "author", "source", "section", "type", "notes", as.numeric(as.POSIXct("2026-06-13 18:30:00", tz = "UTC"))), 8)
   expect_equal(dna_addDocuments(1, "another title", "new text", "author", "source", "section", "type", "notes", as.POSIXct("2026-06-13 18:45:00", tz = "UTC")), 9)
-  expect_error(dna_addDocuments(1, letters[1:6], letters[1:6], letters[1:6], letters[1:6], letters[1:6], letters[1:6], letters[1:6], rep(as.POSIXct("2026-06-13 18:45:00", tz = "UTC"))), "must all have the same length")
-  expect_equal(dna_addDocuments(1, letters[1:6], letters[1:6], letters[1:6], letters[1:6], letters[1:6], letters[1:6], letters[1:6], rep(as.POSIXct("2026-06-13 18:45:00", tz = "UTC"), 6)), 10:15)
+  expect_equal(dna_addDocuments(1, letters[1:6], letters[1:6], NULL, "", letters[1:6], letters[1:6], letters[1:6], date_time = as.POSIXct("2026-06-13 18:45:00", tz = "UTC")), 10:15)
   doc3 <- dna_getDocuments()
   expect_equal(nrow(doc3), 15)
   expect_equal(doc3$date_time[15], as.POSIXct("2026-06-13 18:45:00", tz = "UTC"))
