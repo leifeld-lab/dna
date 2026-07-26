@@ -1171,6 +1171,10 @@ public class MainWindow extends JFrame {
 			});
 		}
 		popup.setVisible(true); // needs to be called after setting modal; hence here instead of in the Popup class
+		
+		// Place focus on the first editable variable field so the user can
+		// start editing values right away without tabbing to the coder combo box.
+		SwingUtilities.invokeLater(() -> popup.focusFirstVariableField());
 	}
 	
 	/**

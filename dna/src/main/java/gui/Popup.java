@@ -463,6 +463,21 @@ class Popup extends JDialog {
 	}
 	
 	/**
+	 * Request focus on the first editable variable combo box in the popup.
+	 * This lets the user start typing values immediately when the popup opens,
+	 * rather than having to tab past the coder combo box first.
+	 */
+	void focusFirstVariableField() {
+		Component[] components = gridBagPanel.getComponents();
+		for (int i = 0; i < components.length; i++) {
+			if (components[i] instanceof JComboBox && components[i].isEnabled()) {
+				components[i].requestFocusInWindow();
+				return;
+			}
+		}
+	}
+
+	/**
 	 * Check if the coder ID has been changed.
 	 * 
 	 * @return Indicator of statement coder ID change.
