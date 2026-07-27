@@ -743,6 +743,22 @@ public class Sql {
 				p.close();
 			}
 			conn.commit();
+			// PostgreSQL: advance SERIAL sequences after explicit-ID seed inserts
+			if (cp.getType().equals("postgresql")) {
+				String[] seqUpdates = {
+					"SELECT setval('coders_id_seq', (SELECT MAX(ID) FROM CODERS));",
+					"SELECT setval('statementtypes_id_seq', (SELECT MAX(ID) FROM STATEMENTTYPES));",
+					"SELECT setval('variables_id_seq', (SELECT MAX(ID) FROM VARIABLES));",
+					"SELECT setval('entities_id_seq', (SELECT MAX(ID) FROM ENTITIES));",
+					"SELECT setval('attributevariables_id_seq', (SELECT MAX(ID) FROM ATTRIBUTEVARIABLES));",
+					"SELECT setval('attributevalues_id_seq', (SELECT MAX(ID) FROM ATTRIBUTEVALUES));"
+				};
+				for (String sql : seqUpdates) {
+					PreparedStatement ps = conn.prepareStatement(sql);
+					ps.executeQuery();
+					ps.close();
+				}
+			}
 			LogEvent l = new LogEvent(Logger.MESSAGE,
 					"[SQL] Created data structures successfully in " + cp.getType().toUpperCase() + " database.",
 					"New tables and initial contents have been successfully created in " + cp.getType().toUpperCase() + " database.");
