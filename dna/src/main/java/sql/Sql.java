@@ -639,7 +639,7 @@ public class Sql {
 					+ "DocumentId INT NOT NULL CHECK(DocumentId > 0) REFERENCES DOCUMENTS(ID) ON DELETE CASCADE, "
 					+ "Start BIGINT NOT NULL CHECK(Start >= 0), "
 					+ "Stop BIGINT NOT NULL CHECK(Stop >= 0), "
-					+ "Coder INT NOT NULL CHECK(Coder > 0) REFERENCES CODERS(ID) ON DELETE CASCADE), "
+					+ "Coder INT NOT NULL CHECK(Coder > 0) REFERENCES CODERS(ID) ON DELETE CASCADE, "
 					+ "CONSTRAINT ck_start_stop CHECK (Start < Stop));");
 			s.add("CREATE TABLE IF NOT EXISTS DATABOOLEAN("
 					+ "ID SERIAL NOT NULL PRIMARY KEY, "
