@@ -63,7 +63,7 @@ dependencies {
     // https://mvnrepository.com/artifact/org.slf4j/slf4j-nop
     implementation group: 'org.slf4j', name: 'slf4j-nop', version: '2.0.0-alpha7'
     // https://mvnrepository.com/artifact/org.xerial/sqlite-jdbc
-    implementation group: 'org.xerial', name: 'sqlite-jdbc', version: '3.36.0.3'
+    implementation group: 'org.xerial', name: 'sqlite-jdbc', version: '3.53.2.1'
     // https://mvnrepository.com/artifact/org.swinglabs.swingx/swingx-all
     implementation group: 'org.swinglabs.swingx', name: 'swingx-all', version: '1.6.5-1'
     // https://mvnrepository.com/artifact/xmlpull/xmlpull

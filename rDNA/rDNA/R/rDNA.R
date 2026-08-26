@@ -36,13 +36,13 @@ dnaEnvironment <- new.env(hash = TRUE, parent = emptyenv())
 #' would need to be restarted first.
 #'
 #' @section Java configuration:
-#' rDNA uses a Java backend (rJava). In some environments (e.g. newer JVMs),
-#' you may see warnings about restricted native access.
+#' rDNA uses a Java backend (\pkg{rJava}). In some environments (e.g., newer
+#' JVMs), you may see warnings about restricted native access.
 #'
 #' To suppress these warnings, you can optionally set:
 #' `JAVA_TOOL_OPTIONS=--enable-native-access=ALL-UNNAMED`
 #'
-#' This is not required for normal usage, but may improve console output
+#' This is not required for normal usage but may improve console output
 #' cleanliness depending on your Java version. These options are set outside of
 #' \R (e.g., in your shell or in an `.Renviron` file).
 #'
@@ -52,6 +52,9 @@ dnaEnvironment <- new.env(hash = TRUE, parent = emptyenv())
 #'
 #' You can set multiple Java tool options at once, for example:
 #' `JAVA_TOOL_OPTIONS="-Xmx4g --enable-native-access=ALL-UNNAMED"`
+#'
+#' These options can also be set inside R before loading \pkg{rDNA}:
+#' \code{options(java.parameters = c("--Xmx4g", "--enable-native-access=ALL-UNNAMED"))}.
 #'
 #' @author Philip Leifeld
 #'
